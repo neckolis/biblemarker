@@ -1,7 +1,12 @@
 {
-    "name": "precept-digital-observation",
+    "name": "@biblemarker/root",
     "private": true,
     "license": "MIT",
+    "scripts": {
+        "dev": "pnpm -r --parallel dev",
+        "sync": "git add . && git commit -m 'save' && git push",
+        "status": "git status"
+    },
     "workspaces": [
         "apps/*",
         "packages/*"

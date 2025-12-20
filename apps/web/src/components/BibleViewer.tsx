@@ -7,11 +7,11 @@ interface Props {
     translation: string
     bookId: number
     chapter: number
-    annotations: Annotation[] // Pass in from parent (App)
-    onTextSelection: (verseId: number, start: number, end: number) => void
+    annotations: Annotation[]
+    targetVerse?: number | null
 }
 
-export function BibleViewer({ translation, bookId, chapter, annotations, onTextSelection }: Props) {
+export function BibleViewer({ translation, bookId, chapter, annotations, targetVerse }: Props) {
     const [verses, setVerses] = useState<Verse[]>([])
     const [loading, setLoading] = useState(false)
 
@@ -25,6 +25,20 @@ export function BibleViewer({ translation, bookId, chapter, annotations, onTextS
             .finally(() => setLoading(false))
     }, [translation, bookId, chapter])
 
+    useEffect(() => {
+        if (!loading && targetVerse && verses.length > 0) {
+            // Wait a tick for DOM to ready
+            setTimeout(() => {
+                const element = document.querySelector(`[data-verse="${targetVerse}"]`);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    element.classList.add('verse-highlight-flash');
+                    setTimeout(() => element.classList.remove('verse-highlight-flash'), 2000);
+                }
+            }, 100);
+        }
+    }, [loading, targetVerse, verses])
+
     if (loading) return <div>Loading scripture...</div>
 
     return (
@@ -34,9 +48,18 @@ export function BibleViewer({ translation, bookId, chapter, annotations, onTextS
                     key={v.pk}
                     verse={v}
                     annotations={annotations}
-                    onSelection={onTextSelection}
                 />
             ))}
+            <style>{`
+                @keyframes flash {
+                    0% { background-color: rgba(59, 130, 246, 0.2); }
+                    100% { background-color: transparent; }
+                }
+                .verse-highlight-flash {
+                    animation: flash 2s ease-out;
+                    border-radius: 4px;
+                }
+            `}</style>
         </div>
     )
 }

@@ -49,3 +49,12 @@ export async function getChapter(translation: string, bookId: number, chapter: n
     return res.json()
 }
 
+export async function searchScripture(translation: string, query: string): Promise<any[]> {
+    const { data: { session } } = await supabase.auth.getSession()
+    const headers: any = {}
+    if (session) headers['Authorization'] = `Bearer ${session.access_token}`
+
+    const res = await fetch(`${API_BASE}/search?translation=${translation}&query=${encodeURIComponent(query)}`, { headers })
+    if (!res.ok) throw new Error('Failed to search scripture')
+    return res.json()
+}

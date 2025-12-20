@@ -82,4 +82,13 @@ export class BollsClient {
 
         return data;
     }
+    async search(translation: string, query: string): Promise<any[]> {
+        if (!ALLOWED_TRANSLATIONS.includes(translation)) {
+            throw new Error('Translation not allowed');
+        }
+
+        const res = await fetch(`${this.baseUrl}/v2/find/${translation}/?search=${encodeURIComponent(query)}`);
+        if (!res.ok) throw new Error('Failed to search');
+        return res.json();
+    }
 }

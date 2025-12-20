@@ -1,15 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
 :root {
-  --primary-color: #2c3e50;
-  --accent-color: #e67e22;
-  --bg-color: #f8f9fa;
-  --text-color: #333;
+  --primary-color: #0f172a;
+  --accent-color: #3b82f6;
+  --bg-color: #f1f5f9;
+  --text-color: #1e293b;
+  --sidebar-bg: #ffffff;
+  --header-bg: #ffffff;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Outfit', sans-serif;
   background-color: var(--bg-color);
   color: var(--text-color);
+  -webkit-font-smoothing: antialiased;
 }
 
 .app-container {
@@ -19,15 +27,64 @@ body {
 }
 
 header {
-  padding: 1rem;
-  background: white;
-  border-bottom: 1px solid #ddd;
+  padding: 0.75rem 1.5rem;
+  background: var(--header-bg);
+  border-bottom: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  box-shadow: var(--shadow-sm);
+  z-index: 100;
 }
 
-/* Ensure Tldraw is transparent so bible text shows through */
+.sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid #e2e8f0;
+  padding: 1.5rem;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.02);
+}
+
+.btn-primary {
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 8px -1px rgba(59, 130, 246, 0.3);
+  filter: brightness(1.05);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Tldraw Overrides */
 .tldraw-layer {
   background: transparent !important;
 }
@@ -40,12 +97,10 @@ header {
   background: transparent !important;
 }
 
-/* Optional: hide Tldraw background patterns if any */
 .tl-background {
   display: none !important;
 }
 
 .bible-viewer-container {
-  background: white;
-  /* Give it a solid background so it doesn't show the body bg */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }

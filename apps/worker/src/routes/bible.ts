@@ -40,4 +40,21 @@ app.get('/chapters', async (c) => {
     }
 })
 
+app.get('/search', async (c) => {
+    const translation = c.req.query('translation')
+    const query = c.req.query('query')
+
+    if (!translation || !query) {
+        return c.json({ error: 'Missing parameters' }, 400)
+    }
+
+    try {
+        const bolls = new BollsClient(c.env.BIBLE_CACHE)
+        const results = await bolls.search(translation, query)
+        return c.json(results)
+    } catch (e) {
+        return c.json({ error: 'Failed to search' }, 500)
+    }
+})
+
 export default app

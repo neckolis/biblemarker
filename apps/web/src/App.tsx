@@ -1,33 +1,20 @@
-// I actually inlined it in the previous step, but I should probably move it if I want clean code. 
-// However, the ReplaceFileContent might have failed if I tried to replace too much context.
-// Let's see if the previous step works first. 
-// I'll wait for the response. 
-// Actually, I replaced the START of App function but I need to make sure I included the IMPORTS.
-// I added imports in the replacement content.
-// "import { Editor, Tldraw } from 'tldraw'"
-// "import { saveDocument, getDocuments, getDocument } from './lib/persistence'"
-// Wait, I replaced `function App() {` ... down to `const [selection, setSelection]`.
-// I need to be careful about not deleting the `useEffect` hooks if they were below.
-// In the previous file content, `useEffect` was right at the top of App().
-// My replacement content INCLUDES `// ... useEffect auth ...`.
-// THIS IS BAD. I replaced code with a comment!
-// I need to PROVIDE the code, not a comment.
-// I will re-issue the `replace_file_content` with FULL implementation of the function or careful slicing.
-
-// Let's cancel the previous tool call conceptually (I can't), but I will overwrite it with a `write_to_file` of `App.tsx`
-// containing the full logic to be safe, since I have changed so much.
-
-import { useState, useEffect } from 'react'
-import { Annotation } from '@precept/shared'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import { BiblePicker } from './components/BiblePicker'
 import { BibleViewer } from './components/BibleViewer'
-import { Editor, Tldraw } from 'tldraw'
+import { Tldraw } from 'tldraw'
 import 'tldraw/tldraw.css'
 import { saveDocument, getDocuments, getDocument } from './lib/persistence'
-import { getPresets, createPreset } from './lib/presets'
-import { Preset } from '@precept/shared'
+import { AppMode, Annotation, AnnotationStyle } from '@precept/shared'
+import { tldrawBridge } from './lib/tldraw-bridge'
+import { KBarProvider } from 'kbar'
+import { CommandPalette } from './components/CommandPalette'
+import { createActions } from './commands/registry'
+import { SelectionToolbar } from './components/SelectionToolbar'
+import { getSelectedAnnotations, clearIntersectingAnnotations, applyAnnotationSmart } from './lib/annotation-engine'
+import { parseReference } from './lib/navigation-utils'
+import { getBooks, Book } from './lib/api'
 import './index.css'
 
 function ExistingDocsList({ onSelect }: { onSelect: (id: string) => void }) {
@@ -37,90 +24,66 @@ function ExistingDocsList({ onSelect }: { onSelect: (id: string) => void }) {
     }, [])
 
     return (
-        <div>
-            <h3>Your Studies</h3>
-            {docs.length === 0 && <p>No saved studies</p>}
-            <ul style={{ paddingLeft: '1rem' }}>
+        <div className="docs-list">
+            <h3 className="sidebar-title">Your Studies</h3>
+            {docs.length === 0 && <p className="empty-msg">No saved studies</p>}
+            <ul className="doc-items">
                 {docs.map(d => (
-                    <li key={d.id} style={{ marginBottom: '0.5rem' }}>
-                        <button
-                            onClick={() => onSelect(d.id)}
-                            style={{ background: 'none', border: 'none', color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
-                        >
+                    <li key={d.id} className="doc-item">
+                        <button onClick={() => onSelect(d.id)} className="doc-link">
                             {d.title || 'Untitled'}
                         </button>
                     </li>
                 ))}
             </ul>
+            <style>{`
+                .sidebar-title { font-size: 0.9rem; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; margin-bottom: 1rem; }
+                .doc-items { list-style: none; padding: 0; margin: 0; }
+                .doc-item { margin-bottom: 0.5rem; }
+                .doc-link { background: none; border: none; color: #3b82f6; font-weight: 500; cursor: pointer; text-align: left; }
+                .doc-link:hover { text-decoration: underline; }
+                .empty-msg { font-size: 0.85rem; color: #94a3b8; }
+            `}</style>
         </div>
     )
 }
 
-function App() {
-    const [session] = useState<Session | null>({
-        user: { id: 'test-user-uuid', email: 'test@example.com' } as any,
-        access_token: 'mock-token',
-        expires_in: 3600,
-        token_type: 'bearer',
-        refresh_token: 'mock-refresh'
-    })
-
-    // App State
-    const [selection, setSelection] = useState<{ t: string, b: number, c: number } | null>(null)
-    const [annotations, setAnnotations] = useState<Annotation[]>([])
-    const [presets, setPresets] = useState<Preset[]>([])
-
-    // Persistence State
-    const [editor, setEditor] = useState<Editor | null>(null)
-    const [docId, setDocId] = useState<string | null>(null)
-    const [docTitle, setDocTitle] = useState('Untitled Study')
-
-    // Tools
-    const [activeColor, setActiveColor] = useState('#ffff00')
-    const [activeTool, setActiveTool] = useState<'highlight' | 'underline'>('highlight')
-
-    // Load presets
-    useEffect(() => {
-        if (session) getPresets().then(setPresets)
-    }, [session])
+function AppContent() {
+    const [session, setSession] = useState<Session | null>(null)
 
     useEffect(() => {
-        // Mock session: effectively skip real auth for testing
-        /*
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session)
         })
-
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session)
         })
-
         return () => subscription.unsubscribe()
-        */
     }, [])
 
-    const handleTextSelection = (verse: number, start: number, end: number) => {
-        if (start === end) return;
+    // App State
+    const [selection, setSelection] = useState<{ t: string, b: number, c: number, v?: number | null } | null>(() => {
+        const t = localStorage.getItem('precept_default_translation') || 'NASB';
+        return { t, b: 1, c: 1, v: null };
+    })
+    const [mode, setMode] = useState<AppMode>('read')
+    const [docId, setDocId] = useState<string | null>(null)
+    const [docTitle, setDocTitle] = useState('Untitled Study')
+    const [annotations, setAnnotations] = useState<Annotation[]>([])
+    const [toolbarVisible, setToolbarVisible] = useState(false)
+    const [books, setBooks] = useState<Book[]>([])
 
-        const newAnn: Annotation = {
-            id: crypto.randomUUID(),
-            document_id: docId || 'pending',
-            user_id: session!.user.id,
-            type: activeTool,
-            color: activeColor,
-            verse,
-            start_offset: start,
-            end_offset: end
-        }
-        setAnnotations(prev => [...prev, newAnn])
-        window.getSelection()?.removeAllRanges();
-    }
+    // Load books for current translation to power navigation
+    useEffect(() => {
+        const currentT = selection?.t || localStorage.getItem('precept_default_translation') || 'NASB';
+        getBooks(currentT).then(setBooks).catch(console.error);
+    }, [selection?.t])
 
-    const handleSave = async () => {
+    const handleSave = useCallback(async () => {
         if (!selection) return alert('Select a chapter first')
+        if (!session) return alert('Please sign in to save')
 
+        const editor = tldrawBridge.getEditor()
         let shapes: any[] = []
         if (editor) {
             const snapshot = editor.store.getSnapshot()
@@ -138,178 +101,256 @@ function App() {
 
             if (saved.id) {
                 setDocId(saved.id)
-                // Refresh list?
             }
             alert('Saved!')
         } catch (e) {
             console.error(e)
             alert('Failed to save')
         }
-    }
+    }, [selection, docId, docTitle, annotations, session])
 
-    const [drawMode, setDrawMode] = useState(false)
+    const handleApplyStyle = (style: AnnotationStyle, color?: string, range?: Range) => {
+        if (!session) return;
+        const newAnns = getSelectedAnnotations(docId || 'pending', session.user.id, style, color, range);
+        if (newAnns.length > 0) {
+            setAnnotations(prev => applyAnnotationSmart(prev, newAnns));
+            window.getSelection()?.removeAllRanges();
+            setToolbarVisible(false);
+        }
+    };
 
-    const Toolbar = () => (
-        <div style={{ padding: '0.5rem', borderBottom: '1px solid #ccc', background: '#f0f0f0', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* ... tool buttons ... */}
-            <div>
-                <strong>Tool:</strong>
-                <button
-                    onClick={() => setActiveTool('highlight')}
-                    style={{ fontWeight: activeTool === 'highlight' ? 'bold' : 'normal', margin: '0 4px' }}
-                >
-                    Highlight
-                </button>
-                <button
-                    onClick={() => setActiveTool('underline')}
-                    style={{ fontWeight: activeTool === 'underline' ? 'bold' : 'normal', margin: '0 4px' }}
-                >
-                    Underline
-                </button>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <strong style={{ marginRight: '4px' }}>Color:</strong>
-                {['#ffff00', '#00ff00', '#ff0000', '#0000ff'].map(c => (
-                    <button
-                        key={c}
-                        onClick={() => setActiveColor(c)}
-                        style={{
-                            width: '20px',
-                            height: '20px',
-                            background: c,
-                            border: activeColor === c ? '2px solid black' : '1px solid #ccc',
-                            marginRight: '4px',
-                            cursor: 'pointer'
-                        }}
-                    />
-                ))}
-            </div>
+    const handleClear = (range?: Range) => {
+        const remaining = clearIntersectingAnnotations(annotations, range);
+        setAnnotations(remaining);
+        window.getSelection()?.removeAllRanges();
+        setToolbarVisible(false);
+    };
 
-            {/* Presets */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: '1px solid #ccc', paddingLeft: '1rem' }}>
-                <strong>Presets:</strong>
-                {presets.map(p => (
-                    <button
-                        key={p.id}
-                        title={p.name}
-                        onClick={() => {
-                            if (p.config.color) setActiveColor(p.config.color)
-                            if (p.kind) setActiveTool(p.kind as any)
-                        }}
-                        style={{
-                            width: '20px', height: '20px',
-                            background: p.config.color || '#ccc',
-                            border: '1px solid #999',
-                            cursor: 'pointer',
-                            borderRadius: '50%'
-                        }}
-                    />
-                ))}
-                <button onClick={async () => {
-                    const name = prompt('Preset Name:')
-                    if (name) {
-                        const newPreset = await createPreset({
-                            name,
-                            kind: activeTool,
-                            config: { color: activeColor },
-                            user_id: session!.user.id
-                        } as any)
-                        setPresets([...presets, newPreset])
-                    }
-                }}>+</button>
-            </div>
+    const handleGoTo = useCallback(() => {
+        const ref = prompt('Go to (e.g. John 3:16):')
+        if (!ref) return;
 
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                    <input type="checkbox" checked={drawMode} onChange={(e) => setDrawMode(e.target.checked)} />
-                    <span>Draw Mode</span>
-                </label>
-                <button onClick={() => setAnnotations([])}>Clear Marks</button>
-            </div>
-        </div>
-    )
+        const parsed = parseReference(ref, books);
+        if (parsed) {
+            setSelection({
+                t: selection?.t || 'ESV',
+                b: parsed.bookId,
+                c: parsed.chapter,
+                v: parsed.verse
+            });
+        } else {
+            alert('Could not parse reference. Try "John 3:16" or "Genesis 1".');
+        }
+    }, [books, selection?.t])
 
+    const actions = useMemo(() => createActions({
+        setMode,
+        navigate: (path) => console.log('Navigate to', path),
+        saveStudy: handleSave,
+        openSearch: () => {
+            const query = prompt('Search Scripture:')
+            if (query) alert(`Searching for: ${query}`)
+        },
+        openGoTo: handleGoTo
+    }), [handleSave, handleGoTo])
 
-    // if (!session) {
-    //     return <Auth />
-    // }
+    // ESC to toggle mode & Direct Hotkeys
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            const isMod = e.metaKey || e.ctrlKey;
+
+            if (e.key === 'Escape' && mode === 'draw') {
+                if (document.activeElement === document.body) {
+                    setMode('read')
+                }
+                return;
+            }
+
+            if (isMod && e.key === 't') {
+                e.preventDefault();
+                setMode('draw');
+                setTimeout(() => {
+                    tldrawBridge.selectTool('text');
+                    tldrawBridge.focus();
+                }, 50);
+            } else if (isMod && e.key === 'd') {
+                e.preventDefault();
+                setMode('draw');
+                setTimeout(() => {
+                    tldrawBridge.selectTool('draw');
+                    tldrawBridge.focus();
+                }, 50);
+            } else if (isMod && e.key === 'g') {
+                e.preventDefault();
+                handleGoTo();
+            } else if (isMod && e.key === 's') {
+                e.preventDefault();
+                handleSave();
+            }
+        }
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [mode, handleSave, handleGoTo])
 
     return (
-        <div className="app-container">
-            <header>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <h1>Precept Digital (Auth Disabled)</h1>
-                    {selection && <button onClick={handleSave}>Save Study</button>}
-                    <input
-                        value={docTitle}
-                        onChange={e => setDocTitle(e.target.value)}
-                        placeholder="Study Title"
-                        style={{ padding: '4px' }}
-                    />
-                </div>
-                {session ? <button onClick={() => supabase.auth.signOut()}>Sign Out</button> : <p>Signed out</p>}
-            </header>
-            <Toolbar />
-            <div className="main-content" style={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
-                <aside className="sidebar" style={{ width: '300px', borderRight: '1px solid #ddd', padding: '1rem', overflowY: 'auto' }}>
-                    <h2>Bible Browser</h2>
-                    <BiblePicker onSelectionChange={(t, b, c) => setSelection({ t, b, c })} />
-                    <hr />
-                    {session && <ExistingDocsList onSelect={(id) => {
-                        getDocument(id).then(doc => {
-                            setSelection({ t: doc.translation, b: doc.book_id, c: doc.chapter })
-                            setAnnotations(doc.annotations || [])
-                            setDocId(doc.id)
-                            setDocTitle(doc.title)
-                        })
-                    }} />}
-                    {!session && <p>Log in to see your studies</p>}
-                </aside>
+        <KBarProvider actions={actions}>
+            <CommandPalette />
+            <div className="app-container">
+                <header>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                        <h1 style={{ color: 'var(--accent-color)', margin: 0, fontSize: '1.5rem' }}>BibleMarker</h1>
+                        <BiblePicker
+                            onSelectionChange={(t, b, c) => setSelection({ t, b, c, v: null })}
+                            initialSelection={selection}
+                        />
+                    </div>
 
-                <main style={{ flexGrow: 1, position: 'relative', overflow: 'hidden' }}>
-                    <div className="bible-viewer-container" style={{
-                        position: 'absolute',
-                        inset: 0,
-                        overflow: 'auto',
-                        padding: '2rem',
-                        zIndex: drawMode ? 1 : 10,
-                        pointerEvents: drawMode ? 'none' : 'auto'
-                    }}>
-                        <div className="bible-text-wrapper" style={{ maxWidth: '800px', margin: '0 auto', fontSize: '1.2rem', paddingBottom: '500px' }}>
-                            {selection ? (
-                                <BibleViewer
-                                    translation={selection.t}
-                                    bookId={selection.b}
-                                    chapter={selection.c}
-                                    annotations={annotations}
-                                    onTextSelection={handleTextSelection}
+                    <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+                        {selection && (
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                <input
+                                    value={docTitle}
+                                    onChange={e => setDocTitle(e.target.value)}
+                                    placeholder="Study Title"
+                                    className="title-input"
                                 />
-                            ) : (
-                                <h3>Select a chapter to begin...</h3>
+                                <button onClick={handleSave} className="btn-save-sm">Save</button>
+                            </div>
+                        )}
+                        <div className="mode-indicator">
+                            <span className={`mode-pill ${mode}`}>{mode.toUpperCase()}</span>
+                        </div>
+                        {session && (
+                            <button className="btn-ghost" onClick={() => supabase.auth.signOut()}>Sign Out</button>
+                        )}
+                    </div>
+                </header>
+
+                <div className="main-content" style={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
+                    <aside className="sidebar">
+                        {session ? (
+                            <ExistingDocsList onSelect={(id) => {
+                                getDocument(id).then(doc => {
+                                    setSelection({ t: doc.translation, b: doc.book_id, c: doc.chapter, v: null })
+                                    setDocId(doc.id)
+                                    setDocTitle(doc.title)
+                                    setAnnotations(doc.annotations || [])
+                                })
+                            }} />
+                        ) : (
+                            <div className="auth-prompt">
+                                <p>Sign in to save your studies.</p>
+                                <button className="btn-primary" onClick={() => alert('SignIn flow')}>Sign In</button>
+                            </div>
+                        )}
+                    </aside>
+
+                    <main style={{ flexGrow: 1, position: 'relative', overflow: 'hidden', background: '#fff' }}>
+                        {/* Reader Layer */}
+                        <div className="bible-viewer-container" style={{
+                            position: 'absolute',
+                            inset: 0,
+                            overflow: 'auto',
+                            padding: '2rem',
+                            zIndex: mode === 'read' ? 10 : 1,
+                            pointerEvents: mode === 'read' ? 'auto' : 'none',
+                            opacity: mode === 'read' ? 1 : 0.4,
+                            transition: 'opacity 0.2s',
+                        }}>
+                            <div className="bible-text-wrapper" style={{ maxWidth: '800px', margin: '0 auto', fontSize: '1.3rem', paddingBottom: '400px' }}>
+                                {selection ? (
+                                    <BibleViewer
+                                        translation={selection.t}
+                                        bookId={selection.b}
+                                        chapter={selection.c}
+                                        annotations={annotations}
+                                        targetVerse={selection.v}
+                                    />
+                                ) : (
+                                    <div className="welcome-state">
+                                        <h2>Welcome to BibleMarker</h2>
+                                        <p>Select a translation and book from the top to begin your observation.</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {mode === 'read' && (
+                                <SelectionToolbar
+                                    isVisible={toolbarVisible}
+                                    onClose={() => setToolbarVisible(false)}
+                                    onApplyStyle={handleApplyStyle}
+                                    onClear={handleClear}
+                                />
                             )}
                         </div>
-                    </div>
 
-                    <div className="tldraw-layer" style={{
-                        position: 'absolute',
-                        inset: 0,
-                        zIndex: drawMode ? 10 : 1,
-                        pointerEvents: drawMode ? 'auto' : 'none',
-                        opacity: drawMode ? 1 : 0.5 /* semi transparent when not in focus? */
-                    }}>
-                        <div className="tldraw-wrapper" style={{ width: '100%', height: '100%' }}>
-                            <Tldraw
-                                persistenceKey="precept-demo"
-                                hideUi={!drawMode}
-                                onMount={(editor) => setEditor(editor)}
-                            />
+                        {/* Tldraw Layer */}
+                        <div className="tldraw-layer" style={{
+                            position: 'absolute',
+                            inset: 0,
+                            zIndex: mode === 'draw' ? 10 : 1,
+                            pointerEvents: mode === 'draw' ? 'auto' : 'none',
+                        }}>
+                            <div className="tldraw-wrapper" style={{ width: '100%', height: '100%' }}>
+                                <Tldraw
+                                    persistenceKey="precept-demo"
+                                    hideUi={mode !== 'draw'}
+                                    onMount={(editor) => tldrawBridge.setEditor(editor)}
+                                />
+                            </div>
                         </div>
-                    </div>
-                </main>
-
+                    </main>
+                </div>
             </div>
-        </div>
+
+            <style>{`
+                .sidebar {
+                    width: 260px;
+                    background: #f8fafc;
+                    border-right: 1px solid #e2e8f0;
+                    padding: 1.5rem;
+                    overflow-y: auto;
+                    flex-shrink: 0;
+                }
+                .title-input {
+                    background: #f1f5f9;
+                    border: 1px solid #e2e8f0;
+                    padding: 6px 12px;
+                    border-radius: 8px;
+                    font-size: 0.9rem;
+                    width: 180px;
+                    outline: none;
+                }
+                .title-input:focus { border-color: #3b82f6; background: #fff; }
+                .btn-save-sm {
+                    background: #1e293b;
+                    color: white;
+                    border: none;
+                    padding: 6px 14px;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    font-size: 0.85rem;
+                    cursor: pointer;
+                }
+                .mode-pill {
+                    padding: 4px 10px;
+                    border-radius: 20px;
+                    font-size: 10px;
+                    font-weight: 800;
+                    letter-spacing: 0.05em;
+                }
+                .mode-pill.read { background: #dcfce7; color: #166534; }
+                .mode-pill.draw { background: #fef9c3; color: #854d0e; }
+                .btn-ghost { background: none; border: none; color: #64748b; font-size: 0.85rem; cursor: pointer; }
+                .btn-ghost:hover { color: #1e293b; }
+                .welcome-state { margin-top: 10vh; text-align: center; color: #64748b; }
+            `}</style>
+        </KBarProvider>
     )
+}
+
+function App() {
+    return <AppContent />
 }
 
 export default App
