@@ -1,0 +1,13 @@
+{
+    "name": "precept-digital-observation",
+    "private": true,
+    "license": "MIT",
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ],
+    "engines": {
+        "node": ">=20"
+    },
+    "packageManager": "pnpm@9.0.0"
+}

@@ -1,0 +1,20 @@
+{
+    "name": "@precept/worker",
+    "version": "0.0.0",
+    "private": true,
+    "scripts": {
+        "deploy": "wrangler deploy",
+        "dev": "wrangler dev",
+        "start": "wrangler dev"
+    },
+    "dependencies": {
+        "hono": "^4.0.0",
+        "@supabase/supabase-js": "^2.39.0",
+        "@precept/shared": "workspace:*"
+    },
+    "devDependencies": {
+        "@cloudflare/workers-types": "^4.20240129.0",
+        "wrangler": "^3.28.0",
+        "typescript": "^5.2.2"
+    }
+}
