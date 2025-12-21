@@ -4,21 +4,26 @@ import { createSupabaseClient } from '../lib/supabase'
 type Bindings = {
     SUPABASE_URL: string
     SUPABASE_ANON_KEY: string
+    SUPABASE_SERVICE_ROLE_KEY: string
+    ENABLE_AUTH: string
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
 
 app.use('*', async (c, next) => {
-    const jwt = c.req.header('Authorization')?.replace('Bearer ', '')
-    if (!jwt) {
+    const authHeader = c.req.header('Authorization')
+    const enableAuth = c.env.ENABLE_AUTH === 'true'
+
+    if (enableAuth && !authHeader) {
         return c.json({ error: 'Unauthorized' }, 401)
     }
     await next()
 })
 
 app.get('/', async (c) => {
-    const jwt = c.req.header('Authorization')!
-    const supabase = createSupabaseClient(c.env.SUPABASE_URL, c.env.SUPABASE_ANON_KEY, jwt)
+    const jwt = c.req.header('Authorization')?.replace('Bearer ', '')
+    const apiKey = jwt ? c.env.SUPABASE_ANON_KEY : c.env.SUPABASE_SERVICE_ROLE_KEY
+    const supabase = createSupabaseClient(c.env.SUPABASE_URL, apiKey, jwt)
 
     const { data, error } = await supabase
         .from('presets')
@@ -29,9 +34,10 @@ app.get('/', async (c) => {
 })
 
 app.post('/', async (c) => {
-    const jwt = c.req.header('Authorization')!
+    const jwt = c.req.header('Authorization')?.replace('Bearer ', '')
+    const apiKey = jwt ? c.env.SUPABASE_ANON_KEY : c.env.SUPABASE_SERVICE_ROLE_KEY
     const body = await c.req.json()
-    const supabase = createSupabaseClient(c.env.SUPABASE_URL, c.env.SUPABASE_ANON_KEY, jwt)
+    const supabase = createSupabaseClient(c.env.SUPABASE_URL, apiKey, jwt)
 
     const { data, error } = await supabase
         .from('presets')
@@ -45,8 +51,9 @@ app.post('/', async (c) => {
 
 app.delete('/:id', async (c) => {
     const id = c.req.param('id')
-    const jwt = c.req.header('Authorization')!
-    const supabase = createSupabaseClient(c.env.SUPABASE_URL, c.env.SUPABASE_ANON_KEY, jwt)
+    const jwt = c.req.header('Authorization')?.replace('Bearer ', '')
+    const apiKey = jwt ? c.env.SUPABASE_ANON_KEY : c.env.SUPABASE_SERVICE_ROLE_KEY
+    const supabase = createSupabaseClient(c.env.SUPABASE_URL, apiKey, jwt)
 
     const { error } = await supabase
         .from('presets')

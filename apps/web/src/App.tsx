@@ -53,6 +53,26 @@ function AppContent() {
     const [session, setSession] = useState<Session | null>(null)
 
     useEffect(() => {
+        // If Auth is disabled (Local Dev), simulate a session
+        if (import.meta.env.VITE_ENABLE_AUTH === 'false') {
+            setSession({
+                access_token: 'mock-token',
+                token_type: 'bearer',
+                expires_in: 3600,
+                refresh_token: 'mock-refresh',
+                user: {
+                    id: 'local-dev-user',
+                    aud: 'authenticated',
+                    role: 'authenticated',
+                    email: 'dev@local.com',
+                    app_metadata: {},
+                    user_metadata: {},
+                    created_at: new Date().toISOString(),
+                }
+            } as Session)
+            return
+        }
+
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session)
         })

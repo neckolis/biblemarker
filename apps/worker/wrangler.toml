@@ -10,7 +10,34 @@ binding = "ASSETS"
 [vars]
 SUPABASE_URL = "https://mwibyylfnfxojdxsbzga.supabase.co"
 SUPABASE_ANON_KEY = "sb_publishable_ViDArTpEg-NOc2pzPy360g_nuOb1fZT"
-# SUPABASE_SERVICE_ROLE_KEY will be set via secret, do not commit
+# SUPABASE_SERVICE_ROLE_KEY will be set via secret
+ENABLE_AUTH = "false" # Default to false for local dev
+
+[env.staging]
+name = "precept-worker-staging"
+[env.staging.assets]
+directory = "../web/dist"
+binding = "ASSETS"
+[[env.staging.kv_namespaces]]
+binding = "BIBLE_CACHE"
+id = "49558b44421f4a858078fd358f176310"
+[env.staging.vars]
+ENABLE_AUTH = "true"
+SUPABASE_URL = "https://mwibyylfnfxojdxsbzga.supabase.co"
+SUPABASE_ANON_KEY = "sb_publishable_ViDArTpEg-NOc2pzPy360g_nuOb1fZT"
+
+[env.production]
+name = "precept-worker-prod"
+[env.production.assets]
+directory = "../web/dist"
+binding = "ASSETS"
+[[env.production.kv_namespaces]]
+binding = "BIBLE_CACHE"
+id = "a90045ce6c8f404a8c7db45b274f0532"
+[env.production.vars]
+ENABLE_AUTH = "true"
+SUPABASE_URL = "https://mwibyylfnfxojdxsbzga.supabase.co"
+SUPABASE_ANON_KEY = "sb_publishable_ViDArTpEg-NOc2pzPy360g_nuOb1fZT"
 
 [[kv_namespaces]]
 binding = "BIBLE_CACHE"
