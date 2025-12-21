@@ -15,7 +15,7 @@ export interface Verse {
     text: string;
 }
 
-const ALLOWED_TRANSLATIONS = ['ESV', 'NASB', 'NLT'];
+const ALLOWED_SLUGS = ['ESV', 'NASB', 'NLT', 'KJV', 'WLC', 'WLCa', 'SBLGNT', 'TISCH'];
 
 export class BollsClient {
     private baseUrl = 'https://bolls.life';
@@ -26,21 +26,23 @@ export class BollsClient {
     }
 
     async getTranslations(): Promise<Translation[]> {
-        // In a real app, I'd check bolls.life/static/translations.json,
-        // but we have a strict requirement to only show ESV, NASB, NLT.
-        // So we just return these hardcoded, or fetch to verify existence if needed.
-        // But bolls.life API is simple enough we can just map slugs.
         return [
             { slug: 'ESV', name: 'English Standard Version' },
             { slug: 'NASB', name: 'New American Standard Bible' },
             { slug: 'NLT', name: 'New Living Translation' },
+            { slug: 'KJV', name: 'King James Version (with Strongs)' },
         ];
     }
 
+    private isAllowed(slug: string): boolean {
+        return ALLOWED_SLUGS.includes(slug);
+    }
+
     async getBooks(translation: string): Promise<Book[]> {
-        if (!ALLOWED_TRANSLATIONS.includes(translation)) {
+        if (!this.isAllowed(translation)) {
             throw new Error('Translation not allowed');
         }
+
 
         const cacheKey = `books:${translation}`;
         if (this.cache) {
@@ -52,8 +54,6 @@ export class BollsClient {
         if (!res.ok) throw new Error('Failed to fetch books');
         const data = await res.json() as Book[];
 
-        // Sort or filter if needed? Bolls usually returns standard order.
-
         if (this.cache) {
             await this.cache.put(cacheKey, JSON.stringify(data), { expirationTtl: 86400 * 7 }); // 1 week
         }
@@ -62,7 +62,7 @@ export class BollsClient {
     }
 
     async getChapter(translation: string, bookId: number, chapter: number): Promise<Verse[]> {
-        if (!ALLOWED_TRANSLATIONS.includes(translation)) {
+        if (!this.isAllowed(translation)) {
             throw new Error('Translation not allowed');
         }
 
@@ -82,8 +82,9 @@ export class BollsClient {
 
         return data;
     }
+
     async search(translation: string, query: string): Promise<any[]> {
-        if (!ALLOWED_TRANSLATIONS.includes(translation)) {
+        if (!this.isAllowed(translation)) {
             throw new Error('Translation not allowed');
         }
 
@@ -91,4 +92,27 @@ export class BollsClient {
         if (!res.ok) throw new Error('Failed to search');
         return res.json();
     }
+
+    async getLexiconDefinition(dict: string, query: string): Promise<any> {
+        if (!['BDBT', 'RUSD'].includes(dict)) {
+            throw new Error('Invalid dictionary');
+        }
+
+        const cacheKey = `lexicon:${dict}:${query}`;
+        if (this.cache) {
+            const cached = await this.cache.get(cacheKey, 'json');
+            if (cached) return cached;
+        }
+
+        const res = await fetch(`${this.baseUrl}/dictionary-definition/${dict}/${encodeURIComponent(query)}/`);
+        if (!res.ok) throw new Error('Failed to fetch lexicon definition');
+        const data = await res.json();
+
+        if (this.cache) {
+            await this.cache.put(cacheKey, JSON.stringify(data), { expirationTtl: 86400 * 30 }); // 30 days
+        }
+
+        return data;
+    }
 }
+

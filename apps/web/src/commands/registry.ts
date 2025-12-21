@@ -34,6 +34,15 @@ export function createActions(options: RegistryOptions): Action[] {
                 setTimeout(() => tldrawBridge.focus(), 50);
             },
         },
+        {
+            id: COMMANDS.SWITCH_TO_RESEARCH.id,
+            name: COMMANDS.SWITCH_TO_RESEARCH.label,
+            shortcut: COMMANDS.SWITCH_TO_RESEARCH.shortcut,
+            keywords: COMMANDS.SWITCH_TO_RESEARCH.keywords,
+            section: COMMANDS.SWITCH_TO_RESEARCH.section,
+            perform: () => setMode('research'),
+        },
+
 
         // Draw Tools
         {

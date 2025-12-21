@@ -57,4 +57,22 @@ app.get('/search', async (c) => {
     }
 })
 
+app.get('/lexicon', async (c) => {
+    const dict = c.req.query('dict')
+    const query = c.req.query('query')
+
+    if (!dict || !query) {
+        return c.json({ error: 'Missing parameters' }, 400)
+    }
+
+    try {
+        const bolls = new BollsClient(c.env.BIBLE_CACHE)
+        const definition = await bolls.getLexiconDefinition(dict, query)
+        return c.json(definition)
+    } catch (e) {
+        return c.json({ error: 'Failed to fetch lexicon definition' }, 500)
+    }
+})
+
 export default app
+

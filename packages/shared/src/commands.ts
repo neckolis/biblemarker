@@ -1,4 +1,4 @@
-export type AppMode = 'read' | 'draw';
+export type AppMode = 'read' | 'draw' | 'research';
 
 export interface CommandDefinition {
     id: string;
@@ -25,6 +25,14 @@ export const COMMANDS: Record<string, CommandDefinition> = {
         shortcut: ['d'],
         section: 'Mode'
     },
+    SWITCH_TO_RESEARCH: {
+        id: 'switch-to-research',
+        label: 'Switch to Research Mode',
+        keywords: 'research lexicon greek hebrew original language',
+        shortcut: ['r'],
+        section: 'Mode'
+    },
+
 
     // Draw Tools
     ACTIVATE_TEXT_TOOL: {

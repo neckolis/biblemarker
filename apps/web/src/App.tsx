@@ -15,6 +15,7 @@ import { SelectionToolbar } from './components/SelectionToolbar'
 import { getSelectedAnnotations, clearIntersectingAnnotations, applyAnnotationSmart } from './lib/annotation-engine'
 import { parseReference } from './lib/navigation-utils'
 import { getBooks, Book } from './lib/api'
+import { ResearchMode } from './components/ResearchMode'
 import './index.css'
 
 function ExistingDocsList({ onSelect }: { onSelect: (id: string) => void }) {
@@ -183,10 +184,14 @@ function AppContent() {
             } else if (isMod && e.key === 'g') {
                 e.preventDefault();
                 handleGoTo();
+            } else if (isMod && e.key === 'r') {
+                e.preventDefault();
+                setMode('research');
             } else if (isMod && e.key === 's') {
                 e.preventDefault();
                 handleSave();
             }
+
         }
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
@@ -217,9 +222,28 @@ function AppContent() {
                                 <button onClick={handleSave} className="btn-save-sm">Save</button>
                             </div>
                         )}
-                        <div className="mode-indicator">
-                            <span className={`mode-pill ${mode}`}>{mode.toUpperCase()}</span>
-                        </div>
+
+                        <nav className="mode-tabs">
+                            <button
+                                className={`mode-tab ${mode === 'read' ? 'active' : ''}`}
+                                onClick={() => setMode('read')}
+                            >
+                                Read
+                            </button>
+                            <button
+                                className={`mode-tab ${mode === 'draw' ? 'active' : ''}`}
+                                onClick={() => setMode('draw')}
+                            >
+                                Draw
+                            </button>
+                            <button
+                                className={`mode-tab ${mode === 'research' ? 'active' : ''}`}
+                                onClick={() => setMode('research')}
+                            >
+                                Research
+                            </button>
+                        </nav>
+
                         {session && (
                             <button className="btn-ghost" onClick={() => supabase.auth.signOut()}>Sign Out</button>
                         )}
@@ -299,6 +323,23 @@ function AppContent() {
                                 />
                             </div>
                         </div>
+
+                        {/* Research Layer */}
+                        {mode === 'research' && selection && (
+                            <div className="research-layer" style={{
+                                position: 'absolute',
+                                inset: 0,
+                                zIndex: 20,
+                                background: '#fff'
+                            }}>
+                                <ResearchMode
+                                    translation={selection.t}
+                                    bookId={selection.b}
+                                    chapter={selection.c}
+                                    targetVerse={selection.v}
+                                />
+                            </div>
+                        )}
                     </main>
                 </div>
             </div>
@@ -344,6 +385,33 @@ function AppContent() {
                 .btn-ghost { background: none; border: none; color: #64748b; font-size: 0.85rem; cursor: pointer; }
                 .btn-ghost:hover { color: #1e293b; }
                 .welcome-state { margin-top: 10vh; text-align: center; color: #64748b; }
+
+                .mode-tabs {
+                    display: flex;
+                    background: #f1f5f9;
+                    padding: 4px;
+                    border-radius: 10px;
+                    gap: 4px;
+                }
+                .mode-tab {
+                    padding: 6px 16px;
+                    border: none;
+                    background: none;
+                    font-size: 0.85rem;
+                    font-weight: 600;
+                    color: #64748b;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+                .mode-tab.active {
+                    background: #fff;
+                    color: #1e293b;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                }
+                .mode-tab:hover:not(.active) {
+                    background: #e2e8f0;
+                }
             `}</style>
         </KBarProvider>
     )
