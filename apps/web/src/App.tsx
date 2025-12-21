@@ -16,6 +16,7 @@ import { getSelectedAnnotations, clearIntersectingAnnotations, applyAnnotationSm
 import { parseReference } from './lib/navigation-utils'
 import { getBooks, Book } from './lib/api'
 import { ResearchMode } from './components/ResearchMode'
+import { AuthModal } from './components/AuthModal'
 import './index.css'
 
 function ExistingDocsList({ onSelect }: { onSelect: (id: string) => void }) {
@@ -93,6 +94,7 @@ function AppContent() {
     const [annotations, setAnnotations] = useState<Annotation[]>([])
     const [toolbarVisible, setToolbarVisible] = useState(false)
     const [books, setBooks] = useState<Book[]>([])
+    const [showAuthModal, setShowAuthModal] = useState(false)
 
     // Load books for current translation to power navigation
     useEffect(() => {
@@ -284,7 +286,7 @@ function AppContent() {
                         ) : (
                             <div className="auth-prompt">
                                 <p>Sign in to save your studies.</p>
-                                <button className="btn-primary" onClick={() => alert('SignIn flow')}>Sign In</button>
+                                <button className="btn-primary" onClick={() => setShowAuthModal(true)}>Sign In</button>
                             </div>
                         )}
                     </aside>
@@ -433,6 +435,8 @@ function AppContent() {
                     background: #e2e8f0;
                 }
             `}</style>
+
+            <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
         </KBarProvider>
     )
 }
