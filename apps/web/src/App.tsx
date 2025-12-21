@@ -133,8 +133,8 @@ function AppContent() {
     }, [selection, docId, docTitle, annotations, session])
 
     const handleApplyStyle = (style: AnnotationStyle, color?: string, range?: Range) => {
-        if (!session) return;
-        const newAnns = getSelectedAnnotations(docId || 'pending', session.user.id, style, color, range);
+        const userId = session?.user?.id || 'guest-user';
+        const newAnns = getSelectedAnnotations(docId || 'pending', userId, style, color, range);
         if (newAnns.length > 0) {
             setAnnotations(prev => applyAnnotationSmart(prev, newAnns));
             window.getSelection()?.removeAllRanges();

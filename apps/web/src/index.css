@@ -104,3 +104,81 @@ header {
 .bible-viewer-container {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .app-container {
+    height: 100dvh;
+    /* dynamic view height for mobile */
+  }
+
+  header {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    align-items: stretch;
+  }
+
+  header div {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    align-items: center;
+  }
+
+  /* Make logo/title smaller on mobile */
+  h1 {
+    font-size: 1.25rem;
+    margin: 0;
+  }
+
+  /* Hide sidebar by default on mobile, make it an overlay if needed */
+  .sidebar {
+    display: none;
+    /* For now, hide sidebar on mobile to prioritize reading */
+    position: fixed;
+    z-index: 50;
+    inset: 0;
+    width: 80%;
+    max-width: 300px;
+  }
+
+  /* Adjust main content area */
+  .main-content {
+    flex-direction: column;
+  }
+
+  /* Bible text adjustments */
+  .verse-container {
+    line-height: 2 !important;
+    margin-bottom: 1.2em !important;
+  }
+
+  .verse-text {
+    font-size: 1.1rem;
+  }
+
+  /* Toolbar improvements for mobile touch */
+  [role="toolbar"] {
+    max-width: 90vw;
+    flex-wrap: wrap;
+    padding: 8px;
+  }
+
+  /* Adjust floating buttons if any */
+  .selection-toolbar-btn {
+    padding: 12px;
+    /* larger touch target */
+  }
+
+  /* Auth prompt styling */
+  .auth-prompt {
+    font-size: 0.9rem;
+    text-align: center;
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: 12px;
+  }
+}
