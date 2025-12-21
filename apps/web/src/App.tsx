@@ -225,7 +225,7 @@ function AppContent() {
             <div className="app-container">
                 <header>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                        <h1 style={{ color: 'var(--accent-color)', margin: 0, fontSize: '1.5rem' }}>BibleMarker</h1>
+                        <h1 style={{ color: 'var(--accent-color)', margin: 0, fontSize: '1.5rem' }}>Inductive Bible AI</h1>
                         <BiblePicker
                             onSelectionChange={(t, b, c) => setSelection({ t, b, c, v: null })}
                             initialSelection={selection}
@@ -314,7 +314,7 @@ function AppContent() {
                                     />
                                 ) : (
                                     <div className="welcome-state">
-                                        <h2>Welcome to BibleMarker</h2>
+                                        <h2>Welcome to Inductive Bible AI</h2>
                                         <p>Select a translation and book from the top to begin your observation.</p>
                                     </div>
                                 )}

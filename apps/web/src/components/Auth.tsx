@@ -21,7 +21,7 @@ export function Auth() {
     return (
         <div className="auth-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
             <div className="card" style={{ padding: '2rem', border: '1px solid #ccc', borderRadius: '8px', maxWidth: '400px', width: '100%' }}>
-                <h1 className="header">Precept Digital Observation</h1>
+                <h1 className="header">Inductive Bible AI</h1>
                 <p className="description">Sign in via magic link to access your studies.</p>
 
                 {sent ? (
