@@ -28,6 +28,10 @@ SUPABASE_ANON_KEY = "sb_publishable_ViDArTpEg-NOc2pzPy360g_nuOb1fZT"
 
 [env.production]
 name = "precept-worker-prod"
+routes = [
+  { pattern = "inductivebible.ai", custom_domain = true },
+  { pattern = "www.inductivebible.ai", custom_domain = true }
+]
 [env.production.assets]
 directory = "../web/dist"
 binding = "ASSETS"
