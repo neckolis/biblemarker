@@ -1,49 +1,134 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
+/* =============================================================================
+   CSS CUSTOM PROPERTIES (Design Tokens)
+   ============================================================================= */
 :root {
   --primary-color: #0f172a;
   --accent-color: #3b82f6;
-  --bg-color: #f1f5f9;
+  --bg-color: #f8fafc;
   --text-color: #1e293b;
+  --text-muted: #64748b;
   --sidebar-bg: #ffffff;
   --header-bg: #ffffff;
+  --border-color: #e2e8f0;
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  /* Mobile-specific */
+  --header-height: 60px;
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+
+  /* Touch targets (min 44px for mobile) */
+  --touch-target: 44px;
+}
+
+/* =============================================================================
+   BASE STYLES
+   ============================================================================= */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  height: 100%;
+  overflow: hidden;
 }
 
 body {
   margin: 0;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background-color: var(--bg-color);
   color: var(--text-color);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  height: 100%;
+  overflow: hidden;
+  /* Prevent pull-to-refresh on mobile */
+  overscroll-behavior: none;
 }
 
+#root {
+  height: 100%;
+}
+
+/* =============================================================================
+   APP CONTAINER
+   ============================================================================= */
 .app-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
+  height: 100dvh;
+  /* Dynamic viewport height for mobile */
+  padding-top: var(--safe-area-top);
+  padding-left: var(--safe-area-left);
+  padding-right: var(--safe-area-right);
 }
 
+/* =============================================================================
+   HEADER
+   ============================================================================= */
 header {
-  padding: 0.75rem 1.5rem;
+  padding: 0.5rem 1rem;
   background: var(--header-bg);
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
   box-shadow: var(--shadow-sm);
   z-index: 100;
+  flex-shrink: 0;
+  gap: 0.5rem;
+  min-height: var(--header-height);
 }
 
+/* Header logo/title */
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.header-brand h1 {
+  color: var(--accent-color);
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Header controls area */
+.header-controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* =============================================================================
+   SIDEBAR
+   ============================================================================= */
 .sidebar {
   background: var(--sidebar-bg);
-  border-right: 1px solid #e2e8f0;
+  border-right: 1px solid var(--border-color);
   padding: 1.5rem;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.02);
+  overflow-y: auto;
+  flex-shrink: 0;
+  width: 260px;
 }
 
+/* =============================================================================
+   BUTTONS
+   ============================================================================= */
 .btn-primary {
   background: var(--accent-color);
   color: white;
@@ -52,8 +137,14 @@ header {
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
+  font-family: inherit;
+  font-size: 0.95rem;
   transition: all 0.2s ease;
   box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
+  min-height: var(--touch-target);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-primary:hover {
@@ -66,25 +157,124 @@ header {
   transform: translateY(0);
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
+.btn-ghost {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 8px 12px;
+  border-radius: 6px;
+  min-height: var(--touch-target);
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+.btn-ghost:hover {
+  color: var(--text-color);
+  background: rgba(0, 0, 0, 0.05);
 }
 
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+/* =============================================================================
+   MODE TABS
+   ============================================================================= */
+.mode-tabs {
+  display: flex;
+  background: #f1f5f9;
+  padding: 3px;
   border-radius: 10px;
+  gap: 2px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+.mode-tab {
+  padding: 8px 14px;
+  border: none;
+  background: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  min-height: var(--touch-target);
+  display: flex;
+  align-items: center;
 }
 
-/* Tldraw Overrides */
+.mode-tab.active {
+  background: #fff;
+  color: var(--text-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.mode-tab:hover:not(.active) {
+  background: #e2e8f0;
+}
+
+/* =============================================================================
+   TITLE INPUT & SAVE
+   ============================================================================= */
+.title-input {
+  background: #f1f5f9;
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  width: 140px;
+  outline: none;
+  min-height: var(--touch-target);
+}
+
+.title-input:focus {
+  border-color: var(--accent-color);
+  background: #fff;
+}
+
+.btn-save-sm {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-family: inherit;
+  min-height: var(--touch-target);
+}
+
+/* =============================================================================
+   MAIN CONTENT
+   ============================================================================= */
+.main-content {
+  display: flex;
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+/* =============================================================================
+   BIBLE VIEWER
+   ============================================================================= */
+.bible-viewer-container {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bible-text-wrapper {
+  padding-bottom: calc(200px + var(--safe-area-bottom));
+}
+
+.verse-container {
+  line-height: 1.9;
+  margin-bottom: 1em;
+}
+
+/* =============================================================================
+   TLDRAW OVERRIDES
+   ============================================================================= */
 .tldraw-layer {
   background: transparent !important;
 }
@@ -101,84 +291,446 @@ header {
   display: none !important;
 }
 
-.bible-viewer-container {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* =============================================================================
+   AUTH PROMPT
+   ============================================================================= */
+.auth-prompt {
+  text-align: center;
+  padding: 1rem;
 }
 
-/* Mobile Responsiveness */
+.auth-prompt p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+/* =============================================================================
+   WELCOME STATE
+   ============================================================================= */
+.welcome-state {
+  margin-top: 10vh;
+  text-align: center;
+  color: var(--text-muted);
+  padding: 2rem;
+}
+
+.welcome-state h2 {
+  color: var(--text-color);
+  margin-bottom: 0.5rem;
+}
+
+/* =============================================================================
+   CUSTOM SCROLLBAR
+   ============================================================================= */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* =============================================================================
+   MOBILE HAMBURGER MENU BUTTON
+   ============================================================================= */
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  color: var(--text-color);
+  border-radius: 8px;
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-menu-btn:hover {
+  background: #f1f5f9;
+}
+
+.mobile-menu-icon {
+  width: 24px;
+  height: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.mobile-menu-icon span {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+  transition: all 0.2s;
+}
+
+/* =============================================================================
+   MOBILE OVERLAY MENU
+   ============================================================================= */
+.mobile-menu-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.mobile-menu-overlay.open {
+  opacity: 1;
+}
+
+.mobile-menu-panel {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 85%;
+  max-width: 320px;
+  background: var(--header-bg);
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  padding: var(--safe-area-top) var(--safe-area-right) var(--safe-area-bottom) 0;
+}
+
+.mobile-menu-overlay.open .mobile-menu-panel {
+  transform: translateX(0);
+}
+
+.mobile-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.mobile-menu-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 8px;
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-menu-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.mobile-menu-section {
+  margin-bottom: 1.5rem;
+}
+
+.mobile-menu-section-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.mobile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  color: var(--text-color);
+  text-decoration: none;
+  transition: background 0.2s;
+  min-height: var(--touch-target);
+}
+
+.mobile-menu-item:hover,
+.mobile-menu-item.active {
+  background: #f1f5f9;
+}
+
+.mobile-menu-item.active {
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+/* =============================================================================
+   MOBILE RESPONSIVE STYLES
+   ============================================================================= */
 @media (max-width: 768px) {
-  .app-container {
-    height: 100dvh;
-    /* dynamic view height for mobile */
-  }
 
-  header {
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1rem;
-    align-items: stretch;
-  }
-
-  header div {
+  /* Show mobile menu button */
+  .mobile-menu-btn {
     display: flex;
-    justify-content: space-between;
-    width: 100%;
-    align-items: center;
   }
 
-  /* Make logo/title smaller on mobile */
-  h1 {
-    font-size: 1.25rem;
-    margin: 0;
+  .mobile-menu-overlay {
+    display: block;
   }
 
-  /* Hide sidebar by default on mobile, make it an overlay if needed */
+  /* Header adjustments */
+  header {
+    padding: 0.5rem 0.75rem;
+    flex-wrap: nowrap;
+  }
+
+  .header-brand h1 {
+    font-size: 1.1rem;
+  }
+
+  /* Hide elements that move to mobile menu */
+  .hide-on-mobile {
+    display: none !important;
+  }
+
+  /* Sidebar becomes overlay */
   .sidebar {
     display: none;
-    /* For now, hide sidebar on mobile to prioritize reading */
     position: fixed;
-    z-index: 50;
-    inset: 0;
-    width: 80%;
+    z-index: 150;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 85%;
     max-width: 300px;
+    padding-top: calc(var(--safe-area-top) + 1rem);
   }
 
-  /* Adjust main content area */
+  .sidebar.mobile-open {
+    display: block;
+  }
+
+  /* Main content full width */
   .main-content {
     flex-direction: column;
   }
 
-  /* Bible text adjustments */
+  /* Bible text adjustments for readability */
+  .bible-viewer-container {
+    padding: 1rem !important;
+  }
+
+  .bible-text-wrapper {
+    max-width: 100% !important;
+    font-size: 1.1rem !important;
+    padding-bottom: calc(350px + var(--safe-area-bottom)) !important;
+  }
+
   .verse-container {
     line-height: 2 !important;
     margin-bottom: 1.2em !important;
   }
 
-  .verse-text {
-    font-size: 1.1rem;
+  /* Mode tabs - compact on mobile */
+  .mode-tabs {
+    padding: 2px;
   }
 
-  /* Toolbar improvements for mobile touch */
-  [role="toolbar"] {
-    max-width: 90vw;
-    flex-wrap: wrap;
-    padding: 8px;
+  .mode-tab {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    min-height: 36px;
   }
 
-  /* Adjust floating buttons if any */
-  .selection-toolbar-btn {
-    padding: 12px;
-    /* larger touch target */
+  /* Title input hidden on mobile header */
+  .title-input {
+    width: 100%;
+    margin-bottom: 0.5rem;
   }
 
-  /* Auth prompt styling */
-  .auth-prompt {
-    font-size: 0.9rem;
-    text-align: center;
-  }
-
+  /* Full width buttons on mobile */
   .btn-primary {
     width: 100%;
-    padding: 12px;
+    padding: 14px 20px;
   }
+
+  /* Welcome state */
+  .welcome-state {
+    margin-top: 5vh;
+    padding: 1.5rem;
+  }
+
+  .welcome-state h2 {
+    font-size: 1.25rem;
+  }
+
+  .welcome-state p {
+    font-size: 0.9rem;
+  }
+
+  /* Research mode full screen */
+  .research-layer {
+    padding: 0 !important;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 400px) {
+  header {
+    padding: 0.5rem;
+  }
+
+  .header-brand h1 {
+    font-size: 1rem;
+  }
+
+  .mode-tab {
+    padding: 6px 8px;
+    font-size: 0.75rem;
+  }
+
+  .bible-text-wrapper {
+    font-size: 1rem !important;
+  }
+}
+
+/* Landscape orientation on mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  header {
+    padding: 0.25rem 0.75rem;
+    min-height: 48px;
+  }
+
+  .header-brand h1 {
+    font-size: 1rem;
+  }
+
+  .bible-viewer-container {
+    padding: 0.5rem 1rem !important;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .sidebar {
+    width: 200px;
+    padding: 1rem;
+  }
+
+  .title-input {
+    width: 120px;
+  }
+}
+
+/* =============================================================================
+   SELECTION TOOLBAR MOBILE STYLES
+   ============================================================================= */
+@media (max-width: 768px) {
+  .selection-toolbar-premium {
+    /* Bottom sheet style on mobile */
+    position: fixed !important;
+    bottom: var(--safe-area-bottom) !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 16px 16px 0 0 !important;
+    transform: none !important;
+  }
+
+  .color-grid {
+    grid-template-columns: repeat(8, 1fr) !important;
+  }
+
+  .color-btn {
+    min-height: var(--touch-target);
+    min-width: var(--touch-target);
+  }
+
+  .tab-btn {
+    padding: 12px !important;
+    font-size: 12px !important;
+  }
+
+  .toolbar-actions {
+    padding: 12px 0 !important;
+  }
+
+  .action-btn {
+    padding: 12px !important;
+    min-height: var(--touch-target);
+  }
+
+  /* Emoji picker adjustments */
+  .emoji-container {
+    min-height: 300px !important;
+  }
+
+  em-emoji-picker {
+    height: 300px !important;
+  }
+}
+
+/* =============================================================================
+   BIBLE PICKER MOBILE STYLES
+   ============================================================================= */
+@media (max-width: 768px) {
+  .bible-picker-horizontal {
+    width: 100%;
+  }
+
+  .field-group {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .picker-select {
+    flex: 1;
+    min-width: 70px;
+    padding: 10px 8px !important;
+    font-size: 0.85rem !important;
+  }
+
+  .chapter-select {
+    width: auto !important;
+    flex: 0 0 auto;
+  }
+
+  .btn-go {
+    padding: 10px 20px !important;
+    min-height: var(--touch-target);
+  }
+}
+
+/* =============================================================================
+   DARK MODE (Future Enhancement)
+   ============================================================================= */
+@media (prefers-color-scheme: dark) {
+  /* Uncomment to enable dark mode
+  :root {
+    --primary-color: #f8fafc;
+    --accent-color: #60a5fa;
+    --bg-color: #0f172a;
+    --text-color: #f1f5f9;
+    --text-muted: #94a3b8;
+    --sidebar-bg: #1e293b;
+    --header-bg: #1e293b;
+    --border-color: #334155;
+  }
+  */
 }

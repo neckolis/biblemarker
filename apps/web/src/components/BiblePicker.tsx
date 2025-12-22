@@ -98,19 +98,22 @@ export function BiblePicker({ onSelectionChange, initialSelection }: Props) {
                 .bible-picker-horizontal {
                     display: flex;
                     align-items: center;
+                    width: 100%;
                 }
                 .field-group {
                     display: flex;
-                    gap: 8px;
+                    gap: 6px;
                     background: #f1f5f9;
                     padding: 4px;
                     border-radius: 10px;
                     border: 1px solid #e2e8f0;
+                    flex-wrap: wrap;
+                    width: 100%;
                 }
                 .picker-select {
                     background: transparent;
                     border: none;
-                    padding: 6px 10px;
+                    padding: 8px 10px;
                     font-family: inherit;
                     font-size: 0.9rem;
                     font-weight: 500;
@@ -119,26 +122,54 @@ export function BiblePicker({ onSelectionChange, initialSelection }: Props) {
                     outline: none;
                     border-radius: 6px;
                     transition: background 0.2s;
+                    min-height: 40px;
+                    flex: 1;
+                    min-width: 0;
                 }
                 .picker-select:hover {
                     background: rgba(255,255,255,0.5);
                 }
+                .picker-select:focus {
+                    background: rgba(255,255,255,0.8);
+                }
                 .chapter-select {
-                    width: 70px;
+                    flex: 0 0 auto;
+                    width: 75px;
                 }
                 .btn-go {
                     background: #3b82f6;
                     color: white;
                     border: none;
-                    padding: 6px 16px;
+                    padding: 8px 16px;
                     border-radius: 8px;
                     font-weight: 600;
                     cursor: pointer;
                     transition: all 0.2s;
+                    font-family: inherit;
+                    min-height: 40px;
+                    flex-shrink: 0;
                 }
                 .btn-go:hover {
                     filter: brightness(1.1);
                     transform: scale(1.02);
+                }
+                .btn-go:active {
+                    transform: scale(0.98);
+                }
+                
+                @media (max-width: 768px) {
+                    .field-group {
+                        gap: 4px;
+                    }
+                    .picker-select {
+                        padding: 10px 8px;
+                        font-size: 0.85rem;
+                        min-height: 44px;
+                    }
+                    .btn-go {
+                        padding: 10px 14px;
+                        min-height: 44px;
+                    }
                 }
             `}</style>
         </div>

@@ -17,6 +17,7 @@ import { parseReference } from './lib/navigation-utils'
 import { getBooks, Book } from './lib/api'
 import { ResearchMode } from './components/ResearchMode'
 import { AuthModal } from './components/AuthModal'
+import { X, BookOpen, PenTool, FlaskConical, LogOut, User } from 'lucide-react'
 import './index.css'
 
 function ExistingDocsList({ onSelect }: { onSelect: (id: string) => void }) {
@@ -95,6 +96,7 @@ function AppContent() {
     const [toolbarVisible, setToolbarVisible] = useState(false)
     const [books, setBooks] = useState<Book[]>([])
     const [showAuthModal, setShowAuthModal] = useState(false)
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
     // Load books for current translation to power navigation
     useEffect(() => {
@@ -224,27 +226,20 @@ function AppContent() {
             <CommandPalette />
             <div className="app-container">
                 <header>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                        <h1 style={{ color: 'var(--accent-color)', margin: 0, fontSize: '1.5rem' }}>Inductive Bible AI</h1>
-                        <BiblePicker
-                            onSelectionChange={(t, b, c) => setSelection({ t, b, c, v: null })}
-                            initialSelection={selection}
-                        />
+                    {/* Left side: Brand + Bible Picker */}
+                    <div className="header-brand">
+                        <h1>Inductive Bible AI</h1>
+                        <div className="hide-on-mobile">
+                            <BiblePicker
+                                onSelectionChange={(t, b, c) => setSelection({ t, b, c, v: null })}
+                                initialSelection={selection}
+                            />
+                        </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-                        {selection && (
-                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                <input
-                                    value={docTitle}
-                                    onChange={e => setDocTitle(e.target.value)}
-                                    placeholder="Study Title"
-                                    className="title-input"
-                                />
-                                <button onClick={handleSave} className="btn-save-sm">Save</button>
-                            </div>
-                        )}
-
+                    {/* Right side: Controls */}
+                    <div className="header-controls">
+                        {/* Mode tabs - visible on all sizes */}
                         <nav className="mode-tabs">
                             <button
                                 className={`mode-tab ${mode === 'read' ? 'active' : ''}`}
@@ -266,11 +261,144 @@ function AppContent() {
                             </button>
                         </nav>
 
-                        {session && (
-                            <button className="btn-ghost" onClick={() => supabase.auth.signOut()}>Sign Out</button>
+                        {/* Title input - hidden on mobile */}
+                        {selection && (
+                            <div className="hide-on-mobile" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                <input
+                                    value={docTitle}
+                                    onChange={e => setDocTitle(e.target.value)}
+                                    placeholder="Study Title"
+                                    className="title-input"
+                                />
+                                <button onClick={handleSave} className="btn-save-sm">Save</button>
+                            </div>
                         )}
+
+                        {/* Sign out - hidden on mobile */}
+                        {session && (
+                            <button className="btn-ghost hide-on-mobile" onClick={() => supabase.auth.signOut()}>Sign Out</button>
+                        )}
+
+                        {/* Mobile menu button */}
+                        <button
+                            className="mobile-menu-btn"
+                            onClick={() => setMobileMenuOpen(true)}
+                            aria-label="Open menu"
+                        >
+                            <div className="mobile-menu-icon">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </button>
                     </div>
                 </header>
+
+                {/* Mobile Menu Overlay */}
+                <div
+                    className={`mobile-menu-overlay ${mobileMenuOpen ? 'open' : ''}`}
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setMobileMenuOpen(false);
+                    }}
+                >
+                    <div className="mobile-menu-panel">
+                        <div className="mobile-menu-header">
+                            <h2 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--accent-color)' }}>Menu</h2>
+                            <button
+                                className="mobile-menu-close"
+                                onClick={() => setMobileMenuOpen(false)}
+                                aria-label="Close menu"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <div className="mobile-menu-content">
+                            {/* Bible Picker Section */}
+                            <div className="mobile-menu-section">
+                                <div className="mobile-menu-section-title">Select Passage</div>
+                                <BiblePicker
+                                    onSelectionChange={(t, b, c) => {
+                                        setSelection({ t, b, c, v: null });
+                                        setMobileMenuOpen(false);
+                                    }}
+                                    initialSelection={selection}
+                                />
+                            </div>
+
+                            {/* Study Title Section */}
+                            {selection && (
+                                <div className="mobile-menu-section">
+                                    <div className="mobile-menu-section-title">Study Title</div>
+                                    <input
+                                        value={docTitle}
+                                        onChange={e => setDocTitle(e.target.value)}
+                                        placeholder="Enter title..."
+                                        className="title-input"
+                                        style={{ width: '100%', marginBottom: '0.5rem' }}
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            handleSave();
+                                            setMobileMenuOpen(false);
+                                        }}
+                                        className="btn-primary"
+                                    >
+                                        Save Study
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Mode Switcher Section */}
+                            <div className="mobile-menu-section">
+                                <div className="mobile-menu-section-title">Mode</div>
+                                <button
+                                    className={`mobile-menu-item ${mode === 'read' ? 'active' : ''}`}
+                                    onClick={() => { setMode('read'); setMobileMenuOpen(false); }}
+                                >
+                                    <BookOpen size={20} /> Read Mode
+                                </button>
+                                <button
+                                    className={`mobile-menu-item ${mode === 'draw' ? 'active' : ''}`}
+                                    onClick={() => { setMode('draw'); setMobileMenuOpen(false); }}
+                                >
+                                    <PenTool size={20} /> Draw Mode
+                                </button>
+                                <button
+                                    className={`mobile-menu-item ${mode === 'research' ? 'active' : ''}`}
+                                    onClick={() => { setMode('research'); setMobileMenuOpen(false); }}
+                                >
+                                    <FlaskConical size={20} /> Research Mode
+                                </button>
+                            </div>
+
+                            {/* Account Section */}
+                            <div className="mobile-menu-section">
+                                <div className="mobile-menu-section-title">Account</div>
+                                {session ? (
+                                    <>
+                                        <div className="mobile-menu-item" style={{ color: 'var(--text-muted)' }}>
+                                            <User size={20} /> {session.user?.email || 'Signed In'}
+                                        </div>
+                                        <button
+                                            className="mobile-menu-item"
+                                            onClick={() => { supabase.auth.signOut(); setMobileMenuOpen(false); }}
+                                        >
+                                            <LogOut size={20} /> Sign Out
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button
+                                        className="mobile-menu-item"
+                                        onClick={() => { setShowAuthModal(true); setMobileMenuOpen(false); }}
+                                    >
+                                        <User size={20} /> Sign In
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
 
                 <div className="main-content" style={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
                     <aside className="sidebar">
@@ -366,75 +494,6 @@ function AppContent() {
                 </div>
             </div>
 
-            <style>{`
-                .sidebar {
-                    width: 260px;
-                    background: #f8fafc;
-                    border-right: 1px solid #e2e8f0;
-                    padding: 1.5rem;
-                    overflow-y: auto;
-                    flex-shrink: 0;
-                }
-                .title-input {
-                    background: #f1f5f9;
-                    border: 1px solid #e2e8f0;
-                    padding: 6px 12px;
-                    border-radius: 8px;
-                    font-size: 0.9rem;
-                    width: 180px;
-                    outline: none;
-                }
-                .title-input:focus { border-color: #3b82f6; background: #fff; }
-                .btn-save-sm {
-                    background: #1e293b;
-                    color: white;
-                    border: none;
-                    padding: 6px 14px;
-                    border-radius: 8px;
-                    font-weight: 600;
-                    font-size: 0.85rem;
-                    cursor: pointer;
-                }
-                .mode-pill {
-                    padding: 4px 10px;
-                    border-radius: 20px;
-                    font-size: 10px;
-                    font-weight: 800;
-                    letter-spacing: 0.05em;
-                }
-                .mode-pill.read { background: #dcfce7; color: #166534; }
-                .mode-pill.draw { background: #fef9c3; color: #854d0e; }
-                .btn-ghost { background: none; border: none; color: #64748b; font-size: 0.85rem; cursor: pointer; }
-                .btn-ghost:hover { color: #1e293b; }
-                .welcome-state { margin-top: 10vh; text-align: center; color: #64748b; }
-
-                .mode-tabs {
-                    display: flex;
-                    background: #f1f5f9;
-                    padding: 4px;
-                    border-radius: 10px;
-                    gap: 4px;
-                }
-                .mode-tab {
-                    padding: 6px 16px;
-                    border: none;
-                    background: none;
-                    font-size: 0.85rem;
-                    font-weight: 600;
-                    color: #64748b;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                }
-                .mode-tab.active {
-                    background: #fff;
-                    color: #1e293b;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                }
-                .mode-tab:hover:not(.active) {
-                    background: #e2e8f0;
-                }
-            `}</style>
 
             <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
         </KBarProvider>
