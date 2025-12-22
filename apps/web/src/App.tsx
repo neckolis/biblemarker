@@ -228,7 +228,7 @@ function AppContent() {
                 <header>
                     {/* Left side: Brand + Bible Picker */}
                     <div className="header-brand">
-                        <h1>Inductive Bible AI</h1>
+                        <h1>Inductive<span className="hide-on-mobile"> Bible AI</span></h1>
                         <div className="hide-on-mobile">
                             <BiblePicker
                                 onSelectionChange={(t, b, c) => setSelection({ t, b, c, v: null })}

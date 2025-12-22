@@ -15,9 +15,9 @@ compatibility_date = "2024-01-29"
 # DEFAULT/DEV ENVIRONMENT (used with `wrangler dev`)
 # =============================================================================
 # Serve static assets from the web app build directory
+# NOTE: No 'binding' means Cloudflare auto-serves assets (SPA mode)
 [assets]
 directory = "../web/dist"
-binding = "ASSETS"
 
 [vars]
 ENVIRONMENT = "development"
@@ -39,7 +39,6 @@ name = "inductive-bible-staging"
 
 [env.staging.assets]
 directory = "../web/dist"
-binding = "ASSETS"
 
 [env.staging.vars]
 ENVIRONMENT = "staging"
@@ -63,7 +62,6 @@ routes = [
 
 [env.production.assets]
 directory = "../web/dist"
-binding = "ASSETS"
 
 [env.production.vars]
 ENVIRONMENT = "production"

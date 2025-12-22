@@ -8,13 +8,13 @@
         "start": "wrangler dev"
     },
     "dependencies": {
-        "hono": "^4.0.0",
+        "@precept/shared": "workspace:*",
         "@supabase/supabase-js": "^2.39.0",
-        "@precept/shared": "workspace:*"
+        "hono": "^4.0.0"
     },
     "devDependencies": {
         "@cloudflare/workers-types": "^4.20240129.0",
-        "wrangler": "^4.0.0",
-        "typescript": "^5.2.2"
+        "typescript": "^5.2.2",
+        "wrangler": "^4.56.0"
     }
 }
