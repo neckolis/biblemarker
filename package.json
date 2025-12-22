@@ -1,5 +1,5 @@
 {
-    "name": "@biblemarker/root",
+    "name": "@inductive-bible/root",
     "private": true,
     "license": "MIT",
     "scripts": {

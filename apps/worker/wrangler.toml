@@ -1,48 +1,76 @@
-name = "precept-worker"
+# =============================================================================
+# Inductive Bible AI - Cloudflare Worker Configuration
+# =============================================================================
+# Environments:
+#   - (default/dev): Local development with `wrangler dev`
+#   - staging:       Test deployment with `wrangler deploy --env staging`
+#   - production:    Live site with `wrangler deploy --env production`
+# =============================================================================
+
+name = "inductive-bible-worker"
 main = "src/index.ts"
 compatibility_date = "2024-01-29"
 
+# =============================================================================
+# DEFAULT/DEV ENVIRONMENT (used with `wrangler dev`)
+# =============================================================================
 # Serve static assets from the web app build directory
 [assets]
 directory = "../web/dist"
 binding = "ASSETS"
 
 [vars]
+ENVIRONMENT = "development"
 SUPABASE_URL = "https://mwibyylfnfxojdxsbzga.supabase.co"
 SUPABASE_ANON_KEY = "sb_publishable_ViDArTpEg-NOc2pzPy360g_nuOb1fZT"
-# SUPABASE_SERVICE_ROLE_KEY will be set via secret
-ENABLE_AUTH = "false" # Default to false for local dev
+# SUPABASE_SERVICE_ROLE_KEY will be set via .dev.vars for local dev
+ENABLE_AUTH = "false"  # Auth disabled for rapid local development
 
+# Dev KV namespace - uses local preview mode (no ID needed for `wrangler dev`)
+[[kv_namespaces]]
+binding = "BIBLE_CACHE"
+id = "dev-bible-cache-preview"  # Placeholder - wrangler dev uses local simulation
+
+# =============================================================================
+# STAGING ENVIRONMENT (`wrangler deploy --env staging`)
+# =============================================================================
 [env.staging]
-name = "precept-worker-staging"
+name = "inductive-bible-staging"
+
 [env.staging.assets]
 directory = "../web/dist"
 binding = "ASSETS"
-[[env.staging.kv_namespaces]]
-binding = "BIBLE_CACHE"
-id = "49558b44421f4a858078fd358f176310"
+
 [env.staging.vars]
+ENVIRONMENT = "staging"
 ENABLE_AUTH = "true"
 SUPABASE_URL = "https://mwibyylfnfxojdxsbzga.supabase.co"
 SUPABASE_ANON_KEY = "sb_publishable_ViDArTpEg-NOc2pzPy360g_nuOb1fZT"
 
+[[env.staging.kv_namespaces]]
+binding = "BIBLE_CACHE"
+id = "49558b44421f4a858078fd358f176310"
+
+# =============================================================================
+# PRODUCTION ENVIRONMENT (`wrangler deploy --env production`)
+# =============================================================================
 [env.production]
-name = "precept-worker-prod"
+name = "inductive-bible-prod"
 routes = [
   { pattern = "inductivebible.ai", custom_domain = true },
   { pattern = "www.inductivebible.ai", custom_domain = true }
 ]
+
 [env.production.assets]
 directory = "../web/dist"
 binding = "ASSETS"
-[[env.production.kv_namespaces]]
-binding = "BIBLE_CACHE"
-id = "a90045ce6c8f404a8c7db45b274f0532"
+
 [env.production.vars]
+ENVIRONMENT = "production"
 ENABLE_AUTH = "true"
 SUPABASE_URL = "https://mwibyylfnfxojdxsbzga.supabase.co"
 SUPABASE_ANON_KEY = "sb_publishable_ViDArTpEg-NOc2pzPy360g_nuOb1fZT"
 
-[[kv_namespaces]]
+[[env.production.kv_namespaces]]
 binding = "BIBLE_CACHE"
-id = "todo_replace_with_real_id"
+id = "a90045ce6c8f404a8c7db45b274f0532"
