@@ -103,7 +103,7 @@ export function SelectionToolbar({ onApplyStyle, onClear, isVisible, onClose }: 
     useEffect(() => {
         let isInteracting = false;
 
-        const handleMouseDown = (e: MouseEvent) => {
+        const handleMouseDown = (e: MouseEvent | TouchEvent) => {
             if (refs.floating.current?.contains(e.target as Node)) {
                 isInteracting = true;
             }
@@ -163,11 +163,15 @@ export function SelectionToolbar({ onApplyStyle, onClear, isVisible, onClose }: 
 
         document.addEventListener('mousedown', handleMouseDown);
         document.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener('touchstart', handleMouseDown, { passive: true });
+        document.addEventListener('touchend', handleMouseUp, { passive: true });
         document.addEventListener('selectionchange', handleSelectionChange);
         window.addEventListener('keydown', handleKeyDown);
         return () => {
             document.removeEventListener('mousedown', handleMouseDown);
             document.removeEventListener('mouseup', handleMouseUp);
+            document.removeEventListener('touchstart', handleMouseDown);
+            document.removeEventListener('touchend', handleMouseUp);
             document.removeEventListener('selectionchange', handleSelectionChange);
             window.removeEventListener('keydown', handleKeyDown);
         };
@@ -212,6 +216,7 @@ export function SelectionToolbar({ onApplyStyle, onClear, isVisible, onClose }: 
         <FloatingPortal>
             <div
                 ref={refs.setFloating}
+                className="selection-toolbar-tracker"
                 style={{
                     ...floatingStyles,
                     zIndex: 9999,

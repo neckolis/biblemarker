@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { ChevronDown, ChevronUp, Maximize2 } from 'lucide-react'
 import { Verse, getChapter } from '../lib/api'
 import { LexiconPanel } from './LexiconPanel'
 import { AIResearchPanel } from './AIResearchPanel'
@@ -35,13 +36,36 @@ export function ResearchMode({ translation, bookId, chapter, targetVerse }: Prop
     const [hoveredStrongs, setHoveredStrongs] = useState<string | null>(null)
 
     const leftPaneRef = useRef<HTMLDivElement>(null)
-    const rightPaneRef = useRef<HTMLDivElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
-
     const [leftPanePercent, setLeftPanePercent] = useState(50)
     const [lexiconWidth, setLexiconWidth] = useState(450)
     const [isResizingMid, setIsResizingMid] = useState(false)
     const [isResizingLexicon, setIsResizingLexicon] = useState(false)
+
+    // Mobile states
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+    const [drawerExpanded, setDrawerExpanded] = useState(false)
+
+    useEffect(() => {
+        const handleResize = () => {
+            const mobile = window.innerWidth < 768;
+            setIsMobile(mobile);
+            if (!mobile) setDrawerExpanded(false);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    // Auto-expand drawer when a tool is opened on mobile
+    useEffect(() => {
+        if (isMobile && (selectedLexicon || selectedAiResearch)) {
+            setDrawerExpanded(true);
+        }
+    }, [selectedLexicon, selectedAiResearch, isMobile]);
+
+    const rightPaneRef = useRef<HTMLDivElement>(null)
+
+
 
     const [books, setBooks] = useState<any[]>([])
 
@@ -238,24 +262,158 @@ export function ResearchMode({ translation, bookId, chapter, targetVerse }: Prop
 
     return (
         <div className="research-container" ref={containerRef}>
-            <div className="research-panes">
-                {/* Left Pane - English */}
-                <div
-                    ref={leftPaneRef}
-                    className="pane english-pane"
-                    style={{ width: `${leftPanePercent}%`, flex: 'none' }}
-                >
-                    <header className="pane-header">
-                        <div className="pane-title">{translation}</div>
-                        <div className="pane-tools">
-                            <label className="toggle-original">
-                                <input
-                                    type="checkbox"
-                                    checked={showOriginal}
-                                    onChange={e => setShowOriginal(e.target.checked)}
-                                />
-                                <span className="toggle-label">Show Original ({isOT ? 'Hebrew' : 'Greek'})</span>
-                            </label>
+            {/* Desktop View Content */}
+            {!isMobile && (
+                <div className="research-panes">
+                    {/* Left Pane - English */}
+                    <div
+                        ref={leftPaneRef}
+                        className="pane english-pane"
+                        style={{ width: `${leftPanePercent}%`, flex: 'none' }}
+                    >
+                        <header className="pane-header">
+                            <div className="pane-title">{translation}</div>
+                            <div className="pane-tools">
+                                <label className="toggle-original">
+                                    <input
+                                        type="checkbox"
+                                        checked={showOriginal}
+                                        onChange={e => setShowOriginal(e.target.checked)}
+                                    />
+                                    <span className="toggle-label">Show Original ({isOT ? 'Hebrew' : 'Greek'})</span>
+                                </label>
+                                <select
+                                    value={currentTranslation}
+                                    onChange={e => setCurrentTranslation(e.target.value)}
+                                    className="translation-select"
+                                >
+                                    <option value="NASB">NASB</option>
+                                    <option value="ESV">ESV</option>
+                                    <option value="NLT">NLT</option>
+                                    <option value="KJV">KJV (Strongs)</option>
+                                </select>
+                            </div>
+                        </header>
+                        <div className="pane-content">
+                            {loading ? <div className="loading-state">Loading...</div> : (
+                                englishVerses.map(v => (
+                                    <div key={v.pk} className="verse-row" data-verse={v.verse}>
+                                        <span className="v-num" onClick={() => handleVerseClick(v.verse)}>{v.verse}</span>
+                                        <TokenizedVerse
+                                            text={v.text}
+                                            onTokenClick={(word: string, strongs?: string) => handleTokenClick(word, strongs, v)}
+                                            onTokenHover={setHoveredStrongs}
+                                            activeStrongs={hoveredStrongs}
+                                            isHebrew={false}
+                                        />
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Resizer */}
+                    <div
+                        className={`resizer ${isResizingMid ? 'active' : ''}`}
+                        onMouseDown={(e) => {
+                            e.preventDefault();
+                            setIsResizingMid(true);
+                        }}
+                    />
+
+                    {/* Right Pane: Original (Conditional) */}
+                    {showOriginal && (
+                        <>
+                            <div ref={rightPaneRef} className="pane original-pane" style={{ flex: 1, minWidth: 0 }}>
+                                <header className="pane-header">
+                                    <div className="pane-title">{isOT ? 'Hebrew (WLC)' : 'Greek (SBLGNT)'}</div>
+                                    <div className="pane-meta">{isOT ? 'BDBT Dictionary' : 'RUSD/Thayer Dictionary'}</div>
+                                </header>
+                                <div className="pane-content" dir={isOT ? 'rtl' : 'ltr'}>
+                                    {loading ? <div className="loading-state">Loading...</div> : (
+                                        originalVerses.map(v => (
+                                            <div key={v.pk} className="verse-row" data-verse={v.verse}>
+                                                <span className="v-num" onClick={() => handleVerseClick(v.verse)}>{v.verse}</span>
+                                                <TokenizedVerse
+                                                    text={v.text}
+                                                    onTokenClick={(word: string, strongs?: string) => handleTokenClick(word, strongs, v)}
+                                                    onTokenHover={setHoveredStrongs}
+                                                    activeStrongs={hoveredStrongs}
+                                                    isHebrew={isOT}
+                                                />
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                            <div
+                                className={`resizer lexicon-resizer ${isResizingLexicon ? 'active' : ''}`}
+                                onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    setIsResizingLexicon(true);
+                                }}
+                            />
+                        </>
+                    )}
+
+                    {/* Lexicon Panel - No Original */}
+                    {selectedLexicon && !showOriginal && (
+                        <div className="lexicon-wrapper" style={{ flex: `0 0 ${100 - leftPanePercent}%` }}>
+                            <LexiconPanel
+                                query={selectedLexicon.query}
+                                dict={currentDict}
+                                onClose={() => setSelectedLexicon(null)}
+                                onJumpToStrong={handleJumpToStrong}
+                                onDictChange={setCurrentDict}
+                            />
+                        </div>
+                    )}
+
+                    {/* Lexicon Panel - With Original */}
+                    {selectedLexicon && showOriginal && (
+                        <div className="lexicon-wrapper" style={{ width: `${lexiconWidth}px`, flex: 'none' }}>
+                            <LexiconPanel
+                                query={selectedLexicon.query}
+                                dict={currentDict}
+                                onClose={() => setSelectedLexicon(null)}
+                                onJumpToStrong={handleJumpToStrong}
+                                onDictChange={setCurrentDict}
+                            />
+                        </div>
+                    )}
+
+                    {/* AI Panel - No Original */}
+                    {selectedAiResearch && !showOriginal && (
+                        <div className="lexicon-wrapper" style={{ flex: `0 0 ${100 - leftPanePercent}%` }}>
+                            <AIResearchPanel
+                                context={selectedAiResearch.context}
+                                clicked={selectedAiResearch.clicked}
+                                onClose={() => handleOpenGeneralChat()}
+                                onAnalysisSuccess={handleAnalysisSuccess}
+                            />
+                        </div>
+                    )}
+
+                    {/* AI Panel - With Original */}
+                    {selectedAiResearch && showOriginal && (
+                        <div className="lexicon-wrapper" style={{ width: `${lexiconWidth}px`, flex: 'none' }}>
+                            <AIResearchPanel
+                                context={selectedAiResearch.context}
+                                clicked={selectedAiResearch.clicked}
+                                onClose={() => handleOpenGeneralChat()}
+                                onAnalysisSuccess={handleAnalysisSuccess}
+                            />
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Mobile View Content */}
+            {isMobile && (
+                <div className="research-panes">
+                    <div className="pane english-pane" style={{ flex: 1 }}>
+                        <header className="pane-header">
+                            <div className="pane-title">{translation}</div>
                             <select
                                 value={currentTranslation}
                                 onChange={e => setCurrentTranslation(e.target.value)}
@@ -264,130 +422,78 @@ export function ResearchMode({ translation, bookId, chapter, targetVerse }: Prop
                                 <option value="NASB">NASB</option>
                                 <option value="ESV">ESV</option>
                                 <option value="NLT">NLT</option>
-                                <option value="KJV">KJV (Strongs)</option>
+                                <option value="KJV">KJV</option>
                             </select>
+                        </header>
+                        <div className="pane-content">
+                            {loading ? <div className="loading-state">Loading...</div> : (
+                                englishVerses.map(v => (
+                                    <div key={v.pk} className="verse-row" data-verse={v.verse}>
+                                        <span className="v-num" onClick={() => handleVerseClick(v.verse)}>{v.verse}</span>
+                                        <TokenizedVerse
+                                            text={v.text}
+                                            onTokenClick={(word: string, strongs?: string) => handleTokenClick(word, strongs, v)}
+                                            onTokenHover={setHoveredStrongs}
+                                            activeStrongs={hoveredStrongs}
+                                            isHebrew={false}
+                                        />
+                                    </div>
+                                ))
+                            )}
                         </div>
-                    </header>
-                    <div className="pane-content">
-                        {loading ? <div className="loading-state">Loading...</div> : (
-                            englishVerses.map(v => (
-                                <div key={v.pk} className="verse-row" data-verse={v.verse}>
-                                    <span className="v-num" onClick={() => handleVerseClick(v.verse)}>{v.verse}</span>
-                                    <TokenizedVerse
-                                        text={v.text}
-                                        onTokenClick={(word: string, strongs?: string) => handleTokenClick(word, strongs, v)}
-                                        onTokenHover={setHoveredStrongs}
-                                        activeStrongs={hoveredStrongs}
-                                        isHebrew={false}
-                                    />
-                                </div>
-                            ))
-                        )}
                     </div>
-                </div>
 
-                {/* Resizer */}
-                <div
-                    className={`resizer ${isResizingMid ? 'active' : ''}`}
-                    onMouseDown={(e) => {
-                        e.preventDefault();
-                        setIsResizingMid(true);
-                    }}
-                />
-
-                {/* Right Pane: Original (Conditional) */}
-                {showOriginal && (
-                    <>
-                        <div ref={rightPaneRef} className="pane original-pane" style={{ flex: 1, minWidth: 0 }}>
-                            <header className="pane-header">
-                                <div className="pane-title">{isOT ? 'Hebrew (WLC)' : 'Greek (SBLGNT)'}</div>
-                                <div className="pane-meta">{isOT ? 'BDBT Dictionary' : 'RUSD/Thayer Dictionary'}</div>
-                            </header>
-                            <div className="pane-content" dir={isOT ? 'rtl' : 'ltr'}>
-                                {loading ? <div className="loading-state">Loading...</div> : (
-                                    originalVerses.map(v => (
-                                        <div key={v.pk} className="verse-row" data-verse={v.verse}>
-                                            <span className="v-num" onClick={() => handleVerseClick(v.verse)}>{v.verse}</span>
-                                            <TokenizedVerse
-                                                text={v.text}
-                                                onTokenClick={(word: string, strongs?: string) => handleTokenClick(word, strongs, v)}
-                                                onTokenHover={setHoveredStrongs}
-                                                activeStrongs={hoveredStrongs}
-                                                isHebrew={isOT}
-                                            />
-                                        </div>
-                                    ))
+                    {/* Drawer for research tools */}
+                    {(selectedLexicon || selectedAiResearch) && (
+                        <div className={`research-drawer ${drawerExpanded ? '' : 'collapsed'}`}>
+                            <div className="drawer-handle" onClick={() => setDrawerExpanded(!drawerExpanded)}>
+                                <div className="drawer-bar"></div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Maximize2 size={14} />
+                                    {selectedLexicon ? `Lexicon: ${selectedLexicon.query}` : 'Research'}
+                                </div>
+                                {drawerExpanded ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+                            </div>
+                            <div className="drawer-content">
+                                {selectedLexicon && (
+                                    <LexiconPanel
+                                        query={selectedLexicon.query}
+                                        dict={currentDict}
+                                        onClose={() => setSelectedLexicon(null)}
+                                        onJumpToStrong={handleJumpToStrong}
+                                        onDictChange={setCurrentDict}
+                                    />
+                                )}
+                                {selectedAiResearch && !selectedLexicon && (
+                                    <AIResearchPanel
+                                        context={selectedAiResearch.context}
+                                        clicked={selectedAiResearch.clicked}
+                                        onClose={() => handleOpenGeneralChat()}
+                                        onAnalysisSuccess={handleAnalysisSuccess}
+                                    />
                                 )}
                             </div>
                         </div>
-                        <div
-                            className={`resizer lexicon-resizer ${isResizingLexicon ? 'active' : ''}`}
-                            onMouseDown={(e) => {
-                                e.preventDefault();
-                                setIsResizingLexicon(true);
-                            }}
-                        />
-                    </>
-                )}
+                    )}
+                </div>
+            )}
 
-                {/* Lexicon Panel - No Original */}
-                {selectedLexicon && !showOriginal && (
-                    <div className="lexicon-wrapper" style={{ flex: `0 0 ${100 - leftPanePercent}%` }}>
-                        <LexiconPanel
-                            query={selectedLexicon.query}
-                            dict={currentDict}
-                            onClose={() => setSelectedLexicon(null)}
-                            onJumpToStrong={handleJumpToStrong}
-                            onDictChange={setCurrentDict}
-                        />
-                    </div>
-                )}
-
-                {/* Lexicon Panel - With Original */}
-                {selectedLexicon && showOriginal && (
-                    <div className="lexicon-wrapper" style={{ width: `${lexiconWidth}px`, flex: 'none' }}>
-                        <LexiconPanel
-                            query={selectedLexicon.query}
-                            dict={currentDict}
-                            onClose={() => setSelectedLexicon(null)}
-                            onJumpToStrong={handleJumpToStrong}
-                            onDictChange={setCurrentDict}
-                        />
-                    </div>
-                )}
-
-                {/* AI Panel - No Original */}
-                {selectedAiResearch && !showOriginal && (
-                    <div className="lexicon-wrapper" style={{ flex: `0 0 ${100 - leftPanePercent}%` }}>
-                        <AIResearchPanel
-                            context={selectedAiResearch.context}
-                            clicked={selectedAiResearch.clicked}
-                            onClose={() => handleOpenGeneralChat()}
-                            onAnalysisSuccess={handleAnalysisSuccess}
-                        />
-                    </div>
-                )}
-
-                {/* AI Panel - With Original */}
-                {selectedAiResearch && showOriginal && (
-                    <div className="lexicon-wrapper" style={{ width: `${lexiconWidth}px`, flex: 'none' }}>
-                        <AIResearchPanel
-                            context={selectedAiResearch.context}
-                            clicked={selectedAiResearch.clicked}
-                            onClose={() => handleOpenGeneralChat()}
-                            onAnalysisSuccess={handleAnalysisSuccess}
-                        />
-                    </div>
-                )}
-            </div>
 
             <style>{`
                 .research-container {
                     display: flex;
+                    flex-direction: column;
                     height: 100%;
                     width: 100%;
                     background: #fff;
                     font-family: 'Inter', sans-serif;
+                    overflow: hidden;
+                    position: relative;
+                }
+                @media (min-width: 768px) {
+                    .research-container {
+                        flex-direction: row;
+                    }
                 }
                 .research-loading {
                     display: flex;
@@ -399,8 +505,14 @@ export function ResearchMode({ translation, bookId, chapter, targetVerse }: Prop
                 }
                 .research-panes {
                     display: flex;
+                    flex-direction: column;
                     flex-grow: 1;
                     overflow: hidden;
+                }
+                @media (min-width: 768px) {
+                    .research-panes {
+                        flex-direction: row;
+                    }
                 }
                 .pane {
                     display: flex;
@@ -417,6 +529,9 @@ export function ResearchMode({ translation, bookId, chapter, targetVerse }: Prop
                     display: flex;
                     align-items: center;
                     justify-content: center;
+                }
+                @media (max-width: 767px) {
+                    .resizer { display: none; }
                 }
                 .resizer::after {
                     content: "";
@@ -439,6 +554,54 @@ export function ResearchMode({ translation, bookId, chapter, targetVerse }: Prop
                     flex-direction: column;
                     height: 100%;
                     background: #fff;
+                }
+                /* Mobile Drawer Styles */
+                .research-drawer {
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    background: #fff;
+                    z-index: 1000;
+                    box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+                    border-top: 1px solid #e2e8f0;
+                    border-top-left-radius: 16px;
+                    border-top-right-radius: 16px;
+                    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    display: flex;
+                    flex-direction: column;
+                    max-height: 85vh;
+                }
+                .research-drawer.collapsed {
+                    transform: translateY(calc(100% - 50px));
+                }
+                .drawer-handle {
+                    height: 50px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 0 1rem;
+                    cursor: pointer;
+                    background: #f8fafc;
+                    border-top-left-radius: 16px;
+                    border-top-right-radius: 16px;
+                    flex-shrink: 0;
+                }
+                .drawer-bar {
+                    width: 40px;
+                    height: 4px;
+                    background: #cbd5e1;
+                    border-radius: 2px;
+                    margin: 0 auto;
+                    position: absolute;
+                    top: 8px;
+                    left: calc(50% - 20px);
+                }
+                .drawer-content {
+                    flex-grow: 1;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
                 }
                 .pane-header {
                     padding: 0.75rem 1rem;
@@ -491,6 +654,9 @@ export function ResearchMode({ translation, bookId, chapter, targetVerse }: Prop
                     overflow-y: auto;
                     padding: 2.5rem;
                     line-height: 2;
+                }
+                @media (max-width: 767px) {
+                    .pane-content { padding: 1.5rem; }
                 }
                 .loading-state {
                     display: flex;
