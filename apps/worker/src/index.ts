@@ -4,6 +4,7 @@ import documents from './routes/documents'
 import presets from './routes/presets'
 import ai from './routes/ai'
 import aiStudy from './routes/ai-study'
+import admin from './routes/admin'
 
 const app = new Hono()
 
@@ -16,5 +17,6 @@ app.route('/api/documents', documents)
 app.route('/api/presets', presets)
 app.route('/api', ai)
 app.route('/api/ai-study', aiStudy)
+app.route('/api/admin', admin)
 
 export default app

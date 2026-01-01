@@ -7,28 +7,29 @@ An expert Bible observation tool for inductive study, built on Cloudflare Worker
 
 ## Keyboard Shortcuts
 - `Cmd/Ctrl+K`: Open command palette
-- `Cmd/Ctrl+T`: Switch to Draw Mode + Text tool
-- `Cmd/Ctrl+D`: Switch to Draw Mode + Pen tool
-- `Cmd/Ctrl+R`: Switch to Research Mode
+- `V`: Switch to Read Mode
+- `R`: Switch to Research/Study Mode
+- `A`: Switch to AI Study Mode
 - `Cmd/Ctrl+G`: Go to passage
 - `Cmd/Ctrl+S`: Save study
-- `Esc`: Exit palette / Return to Reader Mode
+- `Esc`: Exit palette / Return to current view
 
 ## Features
 - **Command Palette**: Raycast-style global search for commands (Mode, Navigation, App).
 - **Unified Shortcuts**: Context-aware keyboard shortcuts across all modes.
 - **Three Study Modes**:
-  - **Read**: Text highlighting, underlining, emoji annotations
-  - **Draw**: Freehand annotation via Tldraw
-  - **Research**: AI-powered lexicon and Greek/Hebrew tools
+  - **Read**: Text highlighting, underlining, inductive marking presets
+  - **Study**: AI-powered lexicon and Greek/Hebrew tools with Precept Method panel
+  - **AI Study**: Perplexity-style chat for inductive Bible study with RAG (Workers AI)
 - **Bible Text**: ESV, NASB, NLT, KJV via Bolls.life API (cached at edge).
 - **Persistence**: Save studies to Supabase (Postgres with RLS).
 
 ## Architecture
 - **Monorepo**: pnpm workspace (`apps/web`, `apps/worker`, `packages/shared`).
-- **Frontend**: Vite + React + TypeScript + Vanilla CSS + Tldraw.
+- **Frontend**: Vite + React + TypeScript + Vanilla CSS.
 - **Backend**: Cloudflare Worker (serving API + Static Assets) + Hono router.
-- **Database**: Supabase (Postgres + Auth).
+- **AI Platform**: Workers AI (LLM + Embeddings), Vectorize (RAG), D1 (chat persistence).
+- **Database**: Supabase (Postgres + Auth) + D1 (AI conversations).
 
 ## Setup & Development
 
@@ -96,3 +97,44 @@ wrangler secret put SUPABASE_SERVICE_ROLE_KEY --env production
 - `apps/worker/.dev.vars`: Local development secrets (gitignored)
 - `apps/web/.env`: Frontend environment variables (gitignored)
 - `apps/worker/src/lib/bolls.ts`: Bible text caching and translation filtering
+
+## AI Study Setup (Workers AI + D1 + Vectorize)
+
+The AI Study tab requires additional Cloudflare resources:
+
+### 1. Create D1 Database
+```bash
+# Create databases
+wrangler d1 create inductive-bible-db-staging
+wrangler d1 create inductive-bible-db-prod
+
+# Run migrations
+wrangler d1 execute inductive-bible-db-staging --file=./apps/worker/src/db/schema.sql
+wrangler d1 execute inductive-bible-db-prod --file=./apps/worker/src/db/schema.sql
+```
+
+Update `wrangler.toml` with the database IDs from the create commands.
+
+### 2. Create Vectorize Index
+```bash
+wrangler vectorize create precept-embeddings-staging --dimensions=768 --metric=cosine
+wrangler vectorize create precept-embeddings-prod --dimensions=768 --metric=cosine
+```
+
+### 3. Ingest PreceptAustin Commentary
+```bash
+# Seed document records
+curl -X POST http://localhost:8787/api/admin/ingest/seed
+
+# Index a specific book
+curl -X POST http://localhost:8787/api/admin/ingest/book \
+  -H "Content-Type: application/json" \
+  -d '{"book": "Hebrews"}'
+
+# Check status
+curl http://localhost:8787/api/admin/ingest/status
+```
+
+### AI Models Used
+- **LLM**: `@cf/meta/llama-3-8b-instruct` (via Workers AI)
+- **Embeddings**: `@cf/baai/bge-base-en-v1.5` (768 dimensions)
