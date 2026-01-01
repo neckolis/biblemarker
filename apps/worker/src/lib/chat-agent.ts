@@ -1,5 +1,6 @@
 /// <reference types="@cloudflare/workers-types" />
 import { Env, RAGContext, Message, Source } from './types';
+import { BIBLE_BOOKS } from '@precept/shared';
 
 /**
  * Chat Agent - Core logic for AI Study chat with RAG
@@ -11,7 +12,7 @@ const LLM_MODEL = '@cf/meta/llama-3-8b-instruct' as const;
 /**
  * System prompt for inductive Bible study
  */
-const SYSTEM_PROMPT = `You are an expert Bible study assistant specializing in the Precept Inductive Bible Study Method.
+const INDUCTIVE_PROMPT = `You are an expert Bible study assistant specializing in the Precept Inductive Bible Study Method.
 
 ## Your Role
 - Guide users through Observation, Interpretation, and Application (OIA)
@@ -21,7 +22,7 @@ const SYSTEM_PROMPT = `You are an expert Bible study assistant specializing in t
 - Be concise but thorough
 
 ## Response Format
-When helping with inductive study, structure your response with these sections when appropriate:
+Structure your response with these sections:
 
 **OBSERVATION** (What does the text say?)
 - Key observations about the passage
@@ -37,15 +38,38 @@ When helping with inductive study, structure your response with these sections w
 - Commands to obey, truths to believe
 
 ## Citation Format
-Always cite your sources inline:
-- Scripture: Use format like (John 3:16) or (Romans 8:28-29)
-- PreceptAustin: Mention "According to PreceptAustin commentary..." with the key insight
+Always cite your sources inline with explicit links:
+- Scripture: (John 3:16)
+- PreceptAustin: [Quote snippet...] (Source: [Link Title](Link URL))
 
 ## Guidelines
 - Scripture is the highest authority - always point back to the text
-- Be helpful and encouraging in the faith
-- If unsure, acknowledge uncertainty
 - Keep responses focused and actionable`;
+
+/**
+ * System prompt for general Bible study chat
+ */
+const GENERAL_PROMPT = `You are a helpful and encouraging Bible study assistant.
+
+## Your Role
+- Answer questions about the Bible, theology, and Christian living in a conversational way.
+- Cite Scripture to support your answers.
+- Use PreceptAustin commentary when it provides helpful context or insights.
+- Be warm, personal, and encouraging.
+
+## Response Format
+- Use a natural, conversational structure. Do NOT use Observation/Interpretation/Application headers unless specifically asked.
+- Keep paragraphs short and readable.
+
+## Citation Format
+Always cite your sources clearly:
+- Scripture: (Romans 8:28)
+- PreceptAustin: "Quote snippet..." (Source: [Link Title](Link URL))
+
+## Guidelines
+- Always prioritize Scripture.
+- If referencing commentary, provide the link so the user can study further.
+- Be concise but thorough.`;
 
 /**
  * Generate embeddings for text using Workers AI
@@ -98,11 +122,11 @@ export async function retrieveRAGContext(
                          WHERE pc.id = ?`
                     ).bind(match.metadata.chunk_id).first();
 
-                    if (chunk) {
+                    if (chunk && typeof chunk.text === 'string') {
                         context.precept.push({
-                            text: chunk.text as string,
-                            url: chunk.url as string,
-                            reference: `${chunk.book} ${chunk.chapter}:${chunk.verse_start || ''}`
+                            text: chunk.text,
+                            url: (chunk.url as string) || '',
+                            reference: `${chunk.book || ''} ${chunk.chapter || ''}:${chunk.verse_start || ''}`
                         });
                     }
                 }
@@ -114,8 +138,9 @@ export async function retrieveRAGContext(
 
     // Add current passage context if available
     if (passageContext) {
+        const bookName = BIBLE_BOOKS[passageContext.book_id] || `Book ${passageContext.book_id}`;
         context.scripture.push(
-            `Current passage: ${passageContext.translation} Book ${passageContext.book_id} Chapter ${passageContext.chapter}`
+            `Current passage: ${passageContext.translation} ${bookName} Chapter ${passageContext.chapter}`
         );
     }
 
@@ -134,9 +159,9 @@ function formatRAGContext(context: RAGContext): string {
     }
 
     if (context.precept.length > 0) {
-        parts.push('\n**PreceptAustin Commentary:**');
+        parts.push('\n**PreceptAustin Commentary Snippets:**');
         for (const p of context.precept) {
-            parts.push(`- ${p.reference}: "${p.text.substring(0, 300)}..." [Source](${p.url})`);
+            parts.push(`- From [${p.reference} Commentary](${p.url}): "${p.text.substring(0, 500)}..."`);
         }
     }
 
@@ -149,15 +174,19 @@ function formatRAGContext(context: RAGContext): string {
 function buildMessages(
     userMessage: string,
     context: RAGContext,
-    history: Message[]
+    history: Message[],
+    inductiveMode: boolean = true
 ): Array<{ role: 'system' | 'user' | 'assistant'; content: string }> {
     const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
+
+    // Select system prompt
+    const basePrompt = inductiveMode ? INDUCTIVE_PROMPT : GENERAL_PROMPT;
 
     // System prompt with context
     const contextStr = formatRAGContext(context);
     const systemContent = contextStr
-        ? `${SYSTEM_PROMPT}\n\n## Retrieved Context\n${contextStr}`
-        : SYSTEM_PROMPT;
+        ? `${basePrompt}\n\n## Retrieved Context\n${contextStr}`
+        : basePrompt;
 
     messages.push({ role: 'system', content: systemContent });
 
@@ -182,17 +211,22 @@ export async function generateChatResponse(
     env: Env,
     userMessage: string,
     context: RAGContext,
-    history: Message[]
+    history: Message[],
+    inductiveMode: boolean = true
 ): Promise<ReadableStream> {
-    const messages = buildMessages(userMessage, context, history);
+    const messages = buildMessages(userMessage, context, history, inductiveMode);
 
-    const stream = await env.AI.run(LLM_MODEL, {
-        messages,
-        stream: true,
-        max_tokens: 2048
-    } as any);
-
-    return stream as ReadableStream;
+    try {
+        const stream = await env.AI.run(LLM_MODEL, {
+            messages,
+            stream: true,
+            max_tokens: 2048
+        } as any);
+        return stream as ReadableStream;
+    } catch (e) {
+        console.error('AI.run (streaming) failed:', e);
+        throw e;
+    }
 }
 
 /**
@@ -202,16 +236,27 @@ export async function generateChatResponseSync(
     env: Env,
     userMessage: string,
     context: RAGContext,
-    history: Message[]
+    history: Message[],
+    inductiveMode: boolean = true
 ): Promise<string> {
-    const messages = buildMessages(userMessage, context, history);
+    const messages = buildMessages(userMessage, context, history, inductiveMode);
 
-    const result = await env.AI.run(LLM_MODEL, {
-        messages,
-        max_tokens: 2048
-    } as any) as { response: string };
+    try {
+        const result = await env.AI.run(LLM_MODEL, {
+            messages,
+            max_tokens: 2048
+        } as any) as { response: string };
 
-    return result.response;
+        if (!result || !result.response) {
+            console.error('AI.run (sync) returned empty result:', result);
+            throw new Error('AI model returned an empty response');
+        }
+
+        return result.response;
+    } catch (e) {
+        console.error('AI.run (sync) failed:', e);
+        throw e;
+    }
 }
 
 /**

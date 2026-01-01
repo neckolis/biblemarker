@@ -22,165 +22,186 @@ function uuid(): string {
  * POST /api/ai-study/chat - Streaming chat with RAG
  */
 app.post('/chat', async (c) => {
-    const body = await c.req.json<ChatRequest>();
-    const { message, conversation_id, context } = body;
+    try {
+        const body = await c.req.json<ChatRequest>();
+        const { message, conversation_id, context, inductive_mode = true } = body;
 
-    if (!message || message.trim().length === 0) {
-        return c.json({ error: 'Message is required' }, 400);
-    }
+        if (!message || message.trim().length === 0) {
+            return c.json({ error: 'Message is required' }, 400);
+        }
 
-    // Get or create conversation
-    let convId = conversation_id;
-    if (!convId) {
-        convId = uuid();
+        // Get or create conversation
+        let convId = conversation_id;
+        if (!convId) {
+            convId = uuid();
+            await c.env.DB.prepare(
+                `INSERT INTO conversations (id, user_id, title, context_translation, context_book_id, context_chapter)
+                 VALUES (?, ?, ?, ?, ?, ?)`
+            ).bind(
+                convId,
+                'guest-user', // TODO: Get from auth
+                message.substring(0, 50),
+                context?.translation || null,
+                context?.book_id || null,
+                context?.chapter || null
+            ).run();
+        }
+
+        // Save user message
+        const userMsgId = uuid();
         await c.env.DB.prepare(
-            `INSERT INTO conversations (id, user_id, title, context_translation, context_book_id, context_chapter)
-             VALUES (?, ?, ?, ?, ?, ?)`
-        ).bind(
-            convId,
-            'guest-user', // TODO: Get from auth
-            message.substring(0, 50),
-            context?.translation || null,
-            context?.book_id || null,
-            context?.chapter || null
-        ).run();
-    }
+            `INSERT INTO messages (id, conversation_id, role, content) VALUES (?, ?, 'user', ?)`
+        ).bind(userMsgId, convId, message).run();
 
-    // Save user message
-    const userMsgId = uuid();
-    await c.env.DB.prepare(
-        `INSERT INTO messages (id, conversation_id, role, content) VALUES (?, ?, 'user', ?)`
-    ).bind(userMsgId, convId, message).run();
+        // Load conversation history
+        const historyRows = await c.env.DB.prepare(
+            `SELECT id, conversation_id, role, content, created_at 
+             FROM messages 
+             WHERE conversation_id = ? 
+             ORDER BY created_at ASC`
+        ).bind(convId).all();
 
-    // Load conversation history
-    const historyRows = await c.env.DB.prepare(
-        `SELECT id, conversation_id, role, content, created_at 
-         FROM messages 
-         WHERE conversation_id = ? 
-         ORDER BY created_at ASC`
-    ).bind(convId).all();
+        const history: Message[] = (historyRows.results || []).map((row: any) => ({
+            id: row.id,
+            conversation_id: row.conversation_id,
+            role: row.role,
+            content: row.content,
+            tokens_used: null,
+            created_at: row.created_at
+        }));
 
-    const history: Message[] = (historyRows.results || []).map((row: any) => ({
-        id: row.id,
-        conversation_id: row.conversation_id,
-        role: row.role,
-        content: row.content,
-        tokens_used: null,
-        created_at: row.created_at
-    }));
+        // Retrieve RAG context
+        const ragContext = await retrieveRAGContext(c.env, message, context);
 
-    // Retrieve RAG context
-    const ragContext = await retrieveRAGContext(c.env, message, context);
+        // Check if streaming is requested
+        const acceptsStream = c.req.header('Accept')?.includes('text/event-stream');
 
-    // Check if streaming is requested
-    const acceptsStream = c.req.header('Accept')?.includes('text/event-stream');
+        if (acceptsStream) {
+            // Streaming response
+            const stream = await generateChatResponse(c.env, message, ragContext, history, inductive_mode);
 
-    if (acceptsStream) {
-        // Streaming response
-        const stream = await generateChatResponse(c.env, message, ragContext, history);
+            // We need to collect the full response for saving
+            // Create a TransformStream to tee the response
+            const { readable, writable } = new TransformStream();
+            let fullResponse = '';
 
-        // We need to collect the full response for saving
-        // Create a TransformStream to tee the response
-        const { readable, writable } = new TransformStream();
-        let fullResponse = '';
+            const reader = stream.getReader();
+            const writer = writable.getWriter();
+            const textDecoder = new TextDecoder();
 
-        const reader = stream.getReader();
-        const writer = writable.getWriter();
-        const textDecoder = new TextDecoder();
+            // Process stream in background
+            (async () => {
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
 
-        // Process stream in background
-        (async () => {
-            try {
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
+                        // Pass through to client
+                        await writer.write(value);
 
-                    // Pass through to client
-                    await writer.write(value);
-
-                    // Accumulate for saving
-                    const chunk = textDecoder.decode(value, { stream: true });
-                    // Parse SSE data
-                    const lines = chunk.split('\n');
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            try {
-                                const data = JSON.parse(line.slice(6));
-                                if (data.response) {
-                                    fullResponse += data.response;
+                        // Accumulate for saving
+                        const chunk = textDecoder.decode(value, { stream: true });
+                        // Parse SSE data
+                        const lines = chunk.split('\n');
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const data = JSON.parse(line.slice(6));
+                                    if (data.response) {
+                                        fullResponse += data.response;
+                                    }
+                                } catch {
+                                    // Ignore parse errors
                                 }
-                            } catch {
-                                // Ignore parse errors
                             }
                         }
                     }
-                }
 
-                // Save assistant message after stream completes
-                const assistantMsgId = uuid();
-                await c.env.DB.prepare(
-                    `INSERT INTO messages (id, conversation_id, role, content) VALUES (?, ?, 'assistant', ?)`
-                ).bind(assistantMsgId, convId, fullResponse).run();
-
-                // Extract and save sources
-                const sources = extractSources(fullResponse, ragContext);
-                for (const source of sources) {
+                    // Save assistant message after stream completes
+                    const assistantMsgId = uuid();
                     await c.env.DB.prepare(
-                        `INSERT INTO sources (id, message_id, type, reference, url, snippet) VALUES (?, ?, ?, ?, ?, ?)`
-                    ).bind(uuid(), assistantMsgId, source.type, source.reference, source.url, source.snippet).run();
+                        `INSERT INTO messages (id, conversation_id, role, content) VALUES (?, ?, 'assistant', ?)`
+                    ).bind(assistantMsgId, convId, fullResponse).run();
+
+                    // Extract and save sources
+                    const sources = extractSources(fullResponse, ragContext);
+                    for (const source of sources) {
+                        await c.env.DB.prepare(
+                            `INSERT INTO sources (id, message_id, type, reference, url, snippet) VALUES (?, ?, ?, ?, ?, ?)`
+                        ).bind(
+                            uuid(),
+                            assistantMsgId,
+                            source.type,
+                            source.reference || null,
+                            source.url || null,
+                            source.snippet || null
+                        ).run();
+                    }
+
+                    // Update conversation title if this is the first exchange
+                    if (history.length <= 1) {
+                        const title = message.substring(0, 50) + (message.length > 50 ? '...' : '');
+                        await c.env.DB.prepare(
+                            `UPDATE conversations SET title = ?, updated_at = datetime('now') WHERE id = ?`
+                        ).bind(title, convId).run();
+                    }
+                } catch (e) {
+                    console.error('Stream processing error:', e);
+                } finally {
+                    await writer.close();
                 }
+            })();
 
-                // Update conversation title if this is the first exchange
-                if (history.length <= 1) {
-                    const title = message.substring(0, 50) + (message.length > 50 ? '...' : '');
-                    await c.env.DB.prepare(
-                        `UPDATE conversations SET title = ?, updated_at = datetime('now') WHERE id = ?`
-                    ).bind(title, convId).run();
+            return new Response(readable, {
+                headers: {
+                    'Content-Type': 'text/event-stream',
+                    'Cache-Control': 'no-cache',
+                    'Connection': 'keep-alive',
+                    'X-Conversation-Id': convId
                 }
-            } catch (e) {
-                console.error('Stream processing error:', e);
-            } finally {
-                await writer.close();
-            }
-        })();
+            });
+        } else {
+            // Non-streaming response
+            const response = await generateChatResponseSync(c.env, message, ragContext, history, inductive_mode);
 
-        return new Response(readable, {
-            headers: {
-                'Content-Type': 'text/event-stream',
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-                'X-Conversation-Id': convId
-            }
-        });
-    } else {
-        // Non-streaming response
-        const response = await generateChatResponseSync(c.env, message, ragContext, history);
-
-        // Save assistant message
-        const assistantMsgId = uuid();
-        await c.env.DB.prepare(
-            `INSERT INTO messages (id, conversation_id, role, content) VALUES (?, ?, 'assistant', ?)`
-        ).bind(assistantMsgId, convId, response).run();
-
-        // Extract sources
-        const sources = extractSources(response, ragContext);
-        for (const source of sources) {
+            // Save assistant message
+            const assistantMsgId = uuid();
             await c.env.DB.prepare(
-                `INSERT INTO sources (id, message_id, type, reference, url, snippet) VALUES (?, ?, ?, ?, ?, ?)`
-            ).bind(uuid(), assistantMsgId, source.type, source.reference, source.url, source.snippet).run();
+                `INSERT INTO messages (id, conversation_id, role, content) VALUES (?, ?, 'assistant', ?)`
+            ).bind(assistantMsgId, convId, response).run();
+
+            // Extract sources
+            const sources = extractSources(response, ragContext);
+            for (const source of sources) {
+                await c.env.DB.prepare(
+                    `INSERT INTO sources (id, message_id, type, reference, url, snippet) VALUES (?, ?, ?, ?, ?, ?)`
+                ).bind(
+                    uuid(),
+                    assistantMsgId,
+                    source.type,
+                    source.reference || null,
+                    source.url || null,
+                    source.snippet || null
+                ).run();
+            }
+
+            // Generate follow-ups
+            const conversationText = history.map(m => `${m.role}: ${m.content}`).join('\n');
+            const followUps = await generateFollowUps(c.env, conversationText + `\nassistant: ${response}`);
+
+            return c.json({
+                conversation_id: convId,
+                message_id: assistantMsgId,
+                content: response,
+                sources: sources,
+                follow_ups: followUps
+            });
         }
-
-        // Generate follow-ups
-        const conversationText = history.map(m => `${m.role}: ${m.content}`).join('\n');
-        const followUps = await generateFollowUps(c.env, conversationText + `\nassistant: ${response}`);
-
+    } catch (e: any) {
+        console.error('AI Chat Route Error:', e);
         return c.json({
-            conversation_id: convId,
-            message_id: assistantMsgId,
-            content: response,
-            sources: sources,
-            follow_ups: followUps
-        });
+            error: e.message
+        }, 500);
     }
 });
 
@@ -332,7 +353,14 @@ app.post('/regenerate', async (c) => {
     for (const source of sources) {
         await c.env.DB.prepare(
             `INSERT INTO sources (id, message_id, type, reference, url, snippet) VALUES (?, ?, ?, ?, ?, ?)`
-        ).bind(uuid(), assistantMsgId, source.type, source.reference, source.url, source.snippet).run();
+        ).bind(
+            uuid(),
+            assistantMsgId,
+            source.type,
+            source.reference || null,
+            source.url || null,
+            source.snippet || null
+        ).run();
     }
 
     return c.json({

@@ -14,24 +14,24 @@ interface Props {
 const HEBREW_STRONGS_SLUG = 'WLCa';
 const GREEK_STRONGS_SLUG = 'TISCH';
 
+interface ResearchTab {
+    id: string;
+    title: string;
+    type: 'ai-word-study' | 'lexicon' | 'general-chat';
+    data: {
+        context: any;
+        clicked?: { text: string, start: number, end: number };
+        lexiconQuery?: string;
+    }
+}
+
 export function ResearchMode({ translation, bookId, chapter, targetVerse }: Props) {
     const [englishVerses, setEnglishVerses] = useState<Verse[]>([])
-    const [originalVerses, setOriginalVerses] = useState<Verse[]>([])
     const [loading, setLoading] = useState(false)
-    const [selectedLexicon, setSelectedLexicon] = useState<{ query: string; dict: 'BDBT' | 'RUSD' } | null>(null)
-    const [selectedAiResearch, setSelectedAiResearch] = useState<{
-        context: {
-            translation: string;
-            book: string;
-            bookId: number;
-            chapter: number;
-            verse: number;
-            verseText: string;
-            surroundingContext?: { verse: number; text: string }[];
-        },
-        clicked?: { text: string, start: number, end: number }
-    } | null>(null)
-    const [showOriginal, setShowOriginal] = useState(false)
+    const [tabs, setTabs] = useState<ResearchTab[]>([])
+    const [activeTabId, setActiveTabId] = useState<string | null>(null)
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    const [showOriginal] = useState(false)
     const [currentTranslation, setCurrentTranslation] = useState(translation)
     const [hoveredStrongs, setHoveredStrongs] = useState<string | null>(null)
 
@@ -58,10 +58,10 @@ export function ResearchMode({ translation, bookId, chapter, targetVerse }: Prop
 
     // Auto-expand drawer when a tool is opened on mobile
     useEffect(() => {
-        if (isMobile && (selectedLexicon || selectedAiResearch)) {
+        if (isMobile && activeTab) {
             setDrawerExpanded(true);
         }
-    }, [selectedLexicon, selectedAiResearch, isMobile]);
+    }, [activeTab, isMobile]);
 
     const rightPaneRef = useRef<HTMLDivElement>(null)
 
@@ -86,7 +86,7 @@ export function ResearchMode({ translation, bookId, chapter, targetVerse }: Prop
                 const container = containerRef.current;
                 if (!container) return;
                 const rect = container.getBoundingClientRect();
-                const currentLexWidth = (selectedLexicon || selectedAiResearch) ? lexiconWidth : 0;
+                const currentLexWidth = activeTab ? lexiconWidth : 0;
 
                 if (!showOriginal) {
                     const newPercent = ((e.clientX - rect.left) / rect.width) * 100;
@@ -123,7 +123,7 @@ export function ResearchMode({ translation, bookId, chapter, targetVerse }: Prop
             window.removeEventListener('mouseup', handleMouseUp);
             document.body.style.cursor = 'default';
         };
-    }, [isResizingMid, isResizingLexicon, selectedLexicon, selectedAiResearch, lexiconWidth, showOriginal]);
+    }, [isResizingMid, isResizingLexicon, activeTab, lexiconWidth, showOriginal]);
 
     // Load books
     useEffect(() => {
@@ -136,25 +136,29 @@ export function ResearchMode({ translation, bookId, chapter, targetVerse }: Prop
 
         setLoading(true)
         Promise.all([
-            getChapter(effectiveEnglish, bookId, chapter),
-            getChapter(effectiveOriginal, bookId, chapter)
-        ]).then(([eng, orig]) => {
+            getChapter(effectiveEnglish, bookId, chapter)
+        ]).then(([eng]) => {
             setEnglishVerses(eng)
-            setOriginalVerses(orig)
 
             // Auto-open Chat if not already open
-            if (!selectedAiResearch && eng.length > 0) {
-                setSelectedAiResearch({
-                    context: {
-                        translation: currentTranslation,
-                        book: bookName,
-                        bookId: bookId,
-                        chapter: chapter,
-                        verse: 0,
-                        verseText: eng.map(v => `[${v.verse}] ${v.text.replace(/<[^>]*>/g, '')}`).join('\n')
-                    },
-                    clicked: undefined
-                });
+            if (tabs.length === 0 && eng.length > 0) {
+                const generalTab: ResearchTab = {
+                    id: 'general-chat',
+                    title: 'Study Chat',
+                    type: 'general-chat',
+                    data: {
+                        context: {
+                            translation: currentTranslation,
+                            book: bookName,
+                            bookId: bookId,
+                            chapter: chapter,
+                            verse: 0,
+                            verseText: eng.map(v => `[${v.verse}] ${v.text.replace(/<[^>]*>/g, '')}`).join('\n')
+                        }
+                    }
+                };
+                setTabs([generalTab]);
+                setActiveTabId('general-chat');
             }
         }).catch(err => {
             console.error('Failed to load research data', err)
@@ -200,32 +204,56 @@ export function ResearchMode({ translation, bookId, chapter, targetVerse }: Prop
                 surroundingContext.push({ verse: next.verse, text: next.text.replace(/<[^>]*>/g, '') });
             }
 
-            setSelectedAiResearch({
-                context: {
-                    translation: currentTranslation,
-                    book: bookName,
-                    bookId: bookId,
-                    chapter: chapter,
-                    verse: verse.verse,
-                    verseText: verse.text.replace(/<[^>]*>/g, ''),
-                    surroundingContext
-                },
-                clicked: {
-                    text: word,
-                    start: start,
-                    end: start + word.length
-                }
-            });
-            setSelectedLexicon(null);
+            const tabId = `ai-${word.toLowerCase()}-${verse.verse}`;
+            const existing = tabs.find(t => t.id === tabId);
+
+            if (!existing) {
+                const newTab: ResearchTab = {
+                    id: tabId,
+                    title: word,
+                    type: 'ai-word-study',
+                    data: {
+                        context: {
+                            translation: currentTranslation,
+                            book: bookName,
+                            bookId: bookId,
+                            chapter: chapter,
+                            verse: verse.verse,
+                            verseText: verse.text.replace(/<[^>]*>/g, ''),
+                            surroundingContext
+                        },
+                        clicked: {
+                            text: word,
+                            start: start,
+                            end: start + word.length
+                        }
+                    }
+                };
+                setTabs(prev => [...prev, newTab]);
+            }
+            setActiveTabId(tabId);
             return;
         }
 
-        if (strongs) {
-            setSelectedLexicon({ query: strongs, dict: currentDict });
-        } else if (word) {
-            setSelectedLexicon({ query: word, dict: currentDict });
+        if (strongs || word) {
+            const query = strongs || word;
+            const tabId = `lex-${query.toLowerCase()}`;
+            const existing = tabs.find(t => t.id === tabId);
+
+            if (!existing) {
+                const newTab: ResearchTab = {
+                    id: tabId,
+                    title: word || strongs || 'Lexicon',
+                    type: 'lexicon',
+                    data: {
+                        context: {},
+                        lexiconQuery: query
+                    }
+                };
+                setTabs(prev => [...prev, newTab]);
+            }
+            setActiveTabId(tabId);
         }
-        setSelectedAiResearch(null);
     };
 
     const handleAnalysisSuccess = (strongs: string | null) => {
@@ -238,22 +266,22 @@ export function ResearchMode({ translation, bookId, chapter, targetVerse }: Prop
     };
 
     const handleOpenGeneralChat = () => {
-        setSelectedAiResearch({
-            context: {
-                translation: currentTranslation,
-                book: bookName,
-                bookId: bookId,
-                chapter: chapter,
-                verse: 0,
-                verseText: englishVerses.map(v => `[${v.verse}] ${v.text.replace(/<[^>]*>/g, '')}`).join('\n')
-            },
-            clicked: undefined
-        });
-        setSelectedLexicon(null);
+        setActiveTabId('general-chat');
+    };
+
+    const closeTab = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newTabs = tabs.filter(t => t.id !== id);
+        setTabs(newTabs);
+        if (activeTabId === id && newTabs.length > 0) {
+            setActiveTabId(newTabs[newTabs.length - 1].id);
+        } else if (newTabs.length === 0) {
+            setActiveTabId(null);
+        }
     };
 
     const handleJumpToStrong = (id: string) => {
-        setSelectedLexicon({ query: id, dict: currentDict });
+        handleTokenClick(id, id);
     };
 
     if (loading && englishVerses.length === 0) {
@@ -274,14 +302,6 @@ export function ResearchMode({ translation, bookId, chapter, targetVerse }: Prop
                         <header className="pane-header">
                             <div className="pane-title">{translation}</div>
                             <div className="pane-tools">
-                                <label className="toggle-original">
-                                    <input
-                                        type="checkbox"
-                                        checked={showOriginal}
-                                        onChange={e => setShowOriginal(e.target.checked)}
-                                    />
-                                    <span className="toggle-label">Show Original ({isOT ? 'Hebrew' : 'Greek'})</span>
-                                </label>
                                 <select
                                     value={currentTranslation}
                                     onChange={e => setCurrentTranslation(e.target.value)}
@@ -321,90 +341,49 @@ export function ResearchMode({ translation, bookId, chapter, targetVerse }: Prop
                         }}
                     />
 
-                    {/* Right Pane: Original (Conditional) */}
-                    {showOriginal && (
-                        <>
-                            <div ref={rightPaneRef} className="pane original-pane" style={{ flex: 1, minWidth: 0 }}>
-                                <header className="pane-header">
-                                    <div className="pane-title">{isOT ? 'Hebrew (WLC)' : 'Greek (SBLGNT)'}</div>
-                                    <div className="pane-meta">{isOT ? 'BDBT Dictionary' : 'RUSD/Thayer Dictionary'}</div>
-                                </header>
-                                <div className="pane-content" dir={isOT ? 'rtl' : 'ltr'}>
-                                    {loading ? <div className="loading-state">Loading...</div> : (
-                                        originalVerses.map(v => (
-                                            <div key={v.pk} className="verse-row" data-verse={v.verse}>
-                                                <span className="v-num" onClick={() => handleVerseClick(v.verse)}>{v.verse}</span>
-                                                <TokenizedVerse
-                                                    text={v.text}
-                                                    onTokenClick={(word: string, strongs?: string) => handleTokenClick(word, strongs, v)}
-                                                    onTokenHover={setHoveredStrongs}
-                                                    activeStrongs={hoveredStrongs}
-                                                    isHebrew={isOT}
-                                                />
-                                            </div>
-                                        ))
+                    {/* Right Pane (Research Column) */}
+                    <div className="research-column" style={{ flex: `0 0 ${100 - leftPanePercent}%`, display: 'flex', flexDirection: 'column' }}>
+                        <div className="research-tabs-header">
+                            {tabs.map(tab => (
+                                <div
+                                    key={tab.id}
+                                    className={`research-tab-item ${activeTabId === tab.id ? 'active' : ''}`}
+                                    onClick={() => setActiveTabId(tab.id)}
+                                >
+                                    <span className="tab-title">{tab.title}</span>
+                                    {tab.id !== 'general-chat' && (
+                                        <button className="close-tab-btn" onClick={(e) => closeTab(tab.id, e)}>×</button>
                                     )}
                                 </div>
-                            </div>
-                            <div
-                                className={`resizer lexicon-resizer ${isResizingLexicon ? 'active' : ''}`}
-                                onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    setIsResizingLexicon(true);
-                                }}
-                            />
-                        </>
-                    )}
-
-                    {/* Lexicon Panel - No Original */}
-                    {selectedLexicon && !showOriginal && (
-                        <div className="lexicon-wrapper" style={{ flex: `0 0 ${100 - leftPanePercent}%` }}>
-                            <LexiconPanel
-                                query={selectedLexicon.query}
-                                dict={currentDict}
-                                onClose={() => setSelectedLexicon(null)}
-                                onJumpToStrong={handleJumpToStrong}
-                                onDictChange={setCurrentDict}
-                            />
+                            ))}
                         </div>
-                    )}
 
-                    {/* Lexicon Panel - With Original */}
-                    {selectedLexicon && showOriginal && (
-                        <div className="lexicon-wrapper" style={{ width: `${lexiconWidth}px`, flex: 'none' }}>
-                            <LexiconPanel
-                                query={selectedLexicon.query}
-                                dict={currentDict}
-                                onClose={() => setSelectedLexicon(null)}
-                                onJumpToStrong={handleJumpToStrong}
-                                onDictChange={setCurrentDict}
-                            />
+                        <div className="research-tab-content">
+                            {activeTab?.type === 'lexicon' && (
+                                <LexiconPanel
+                                    query={activeTab.data.lexiconQuery!}
+                                    dict={currentDict}
+                                    onClose={() => closeTab(activeTab.id, { stopPropagation: () => { } } as any)}
+                                    onJumpToStrong={handleJumpToStrong}
+                                    onDictChange={setCurrentDict}
+                                />
+                            )}
+                            {(activeTab?.type === 'ai-word-study' || activeTab?.type === 'general-chat') && (
+                                <AIResearchPanel
+                                    context={activeTab.data.context}
+                                    clicked={activeTab.data.clicked}
+                                    onClose={() => handleOpenGeneralChat()}
+                                    onAnalysisSuccess={handleAnalysisSuccess}
+                                    customTitle={activeTab.type === 'ai-word-study' ? activeTab.title : undefined}
+                                />
+                            )}
+                            {!activeTab && (
+                                <div className="empty-research">
+                                    <p>Select a word to start research</p>
+                                </div>
+                            )}
                         </div>
-                    )}
-
-                    {/* AI Panel - No Original */}
-                    {selectedAiResearch && !showOriginal && (
-                        <div className="lexicon-wrapper" style={{ flex: `0 0 ${100 - leftPanePercent}%` }}>
-                            <AIResearchPanel
-                                context={selectedAiResearch.context}
-                                clicked={selectedAiResearch.clicked}
-                                onClose={() => handleOpenGeneralChat()}
-                                onAnalysisSuccess={handleAnalysisSuccess}
-                            />
-                        </div>
-                    )}
-
-                    {/* AI Panel - With Original */}
-                    {selectedAiResearch && showOriginal && (
-                        <div className="lexicon-wrapper" style={{ width: `${lexiconWidth}px`, flex: 'none' }}>
-                            <AIResearchPanel
-                                context={selectedAiResearch.context}
-                                clicked={selectedAiResearch.clicked}
-                                onClose={() => handleOpenGeneralChat()}
-                                onAnalysisSuccess={handleAnalysisSuccess}
-                            />
-                        </div>
-                    )}
+                    </div>
                 </div>
             )}
 
@@ -444,32 +423,33 @@ export function ResearchMode({ translation, bookId, chapter, targetVerse }: Prop
                     </div>
 
                     {/* Drawer for research tools */}
-                    {(selectedLexicon || selectedAiResearch) && (
+                    {activeTab && (
                         <div className={`research-drawer ${drawerExpanded ? '' : 'collapsed'}`}>
                             <div className="drawer-handle" onClick={() => setDrawerExpanded(!drawerExpanded)}>
                                 <div className="drawer-bar"></div>
                                 <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <Maximize2 size={14} />
-                                    {selectedLexicon ? `Lexicon: ${selectedLexicon.query}` : 'Research'}
+                                    {activeTab.title}
                                 </div>
                                 {drawerExpanded ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
                             </div>
                             <div className="drawer-content">
-                                {selectedLexicon && (
+                                {activeTab.type === 'lexicon' && (
                                     <LexiconPanel
-                                        query={selectedLexicon.query}
+                                        query={activeTab.data.lexiconQuery!}
                                         dict={currentDict}
-                                        onClose={() => setSelectedLexicon(null)}
+                                        onClose={() => setActiveTabId(null)}
                                         onJumpToStrong={handleJumpToStrong}
                                         onDictChange={setCurrentDict}
                                     />
                                 )}
-                                {selectedAiResearch && !selectedLexicon && (
+                                {(activeTab.type === 'ai-word-study' || activeTab.type === 'general-chat') && (
                                     <AIResearchPanel
-                                        context={selectedAiResearch.context}
-                                        clicked={selectedAiResearch.clicked}
+                                        context={activeTab.data.context}
+                                        clicked={activeTab.data.clicked}
                                         onClose={() => handleOpenGeneralChat()}
                                         onAnalysisSuccess={handleAnalysisSuccess}
+                                        customTitle={activeTab.type === 'ai-word-study' ? activeTab.title : undefined}
                                     />
                                 )}
                             </div>
@@ -549,11 +529,72 @@ export function ResearchMode({ translation, bookId, chapter, targetVerse }: Prop
                 .lexicon-resizer {
                     border-left: 1px solid #e1e7ef;
                 }
-                .lexicon-wrapper {
+                .research-column {
                     display: flex;
                     flex-direction: column;
                     height: 100%;
                     background: #fff;
+                    border-left: 1px solid #e1e7ef;
+                }
+                .research-tabs-header {
+                    display: flex;
+                    background: #f8fafc;
+                    border-bottom: 1px solid #e2e8f0;
+                    overflow-x: auto;
+                    flex-shrink: 0;
+                }
+                .research-tab-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    padding: 0.6rem 1rem;
+                    border-right: 1px solid #e2e8f0;
+                    cursor: pointer;
+                    background: #f1f5f9;
+                    color: #64748b;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    transition: all 0.2s;
+                    white-space: nowrap;
+                    min-width: 100px;
+                }
+                .research-tab-item:hover {
+                    background: #e2e8f0;
+                    color: #475569;
+                }
+                .research-tab-item.active {
+                    background: #fff;
+                    color: #2563eb;
+                    border-bottom: 2px solid #2563eb;
+                }
+                .tab-title {
+                    max-width: 120px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                .close-tab-btn {
+                    background: none;
+                    border: none;
+                    color: #94a3b8;
+                    font-size: 1rem;
+                    padding: 0 2px;
+                    border-radius: 4px;
+                }
+                .close-tab-btn:hover {
+                    color: #ef4444;
+                    background: rgba(239, 68, 68, 0.1);
+                }
+                .research-tab-content {
+                    flex-grow: 1;
+                    overflow: hidden;
+                }
+                .empty-research {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100%;
+                    color: #94a3b8;
+                    font-style: italic;
                 }
                 /* Mobile Drawer Styles */
                 .research-drawer {

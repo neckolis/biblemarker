@@ -4,10 +4,7 @@ import {
     BookOpen,
     Heart,
     CheckCircle2,
-    HelpCircle,
-    Info,
-    List,
-    Plus
+    Info
 } from 'lucide-react';
 
 type Mode = 'observation' | 'interpretation' | 'application';
@@ -17,40 +14,7 @@ export function PreceptStudyPanel() {
 
     const renderObservation = () => (
         <div className="precept-content animate-in fade-in slide-in-from-right duration-300">
-            <section className="precept-section">
-                <h3 className="section-title">
-                    <HelpCircle size={16} /> The 5 W's & H
-                </h3>
-                <p className="section-desc">Ask these questions as you read the text multiple times.</p>
-                <div className="checklist">
-                    {[
-                        { q: 'Who is speaking/mentioned?', hint: 'Look for people, groups, and pronouns.' },
-                        { q: 'What is happening?', hint: 'Identify actions, events, and themes.' },
-                        { q: 'When does this take place?', hint: 'Look for time markers, sequence, and duration.' },
-                        { q: 'Where is this happening?', hint: 'Note locations, origins, and destinations.' },
-                        { q: 'Why is this being said?', hint: 'Search for purpose, reasons, and results.' },
-                        { q: 'How is it done?', hint: 'Examine the process or manner of action.' }
-                    ].map((item, i) => (
-                        <div key={i} className="checklist-item">
-                            <div className="q-row">
-                                <span className="q-text">{item.q}</span>
-                                <input type="checkbox" className="q-check" />
-                            </div>
-                            <span className="q-hint">{item.hint}</span>
-                        </div>
-                    ))}
-                </div>
-            </section>
 
-            <section className="precept-section">
-                <h3 className="section-title">
-                    <List size={16} /> Observation Lists
-                </h3>
-                <p className="section-desc">Create lists of facts about people, places, or themes found in the text.</p>
-                <button className="add-list-btn">
-                    <Plus size={14} /> Start New List
-                </button>
-            </section>
         </div>
     );
 

@@ -1,23 +1,23 @@
 /// <reference types="@cloudflare/workers-types" />
 import { Hono } from 'hono'
-import { DeepSeekClient } from '../lib/deepseek'
+import { CloudflareAIClient } from '../lib/cloudflare-ai'
+import { Env } from '../lib/types'
 
-const app = new Hono<{ Bindings: { BIBLE_CACHE: KVNamespace, DEEPSEEK_API_KEY: string } }>()
+const app = new Hono<{ Bindings: Env }>()
 
 app.post('/research/analyze-word', async (c) => {
     const params = await c.req.json()
-    const apiKey = c.env.DEEPSEEK_API_KEY || 'sk-82c2ebfddf04478d9ded022dcbf73ac8'
 
     // Caching
-    const cacheKey = `ai:v1:analyze:${params.translation}:${params.book}:${params.chapter}:${params.verse}:${params.clickedStart}:${params.clickedEnd}`
+    const cacheKey = `ai:v2:analyze:${params.translation}:${params.book}:${params.chapter}:${params.verse}:${params.clickedStart}:${params.clickedEnd}`
     if (c.env.BIBLE_CACHE) {
         const cached = await c.env.BIBLE_CACHE.get(cacheKey)
         if (cached) return c.json(JSON.parse(cached))
     }
 
     try {
-        const deepseek = new DeepSeekClient(apiKey)
-        const result = await deepseek.analyzeWord(params)
+        const ai = new CloudflareAIClient(c.env)
+        const result = await ai.analyzeWord(params)
 
         if (c.env.BIBLE_CACHE) {
             await c.env.BIBLE_CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: 86400 * 30 }) // 30 days
@@ -25,21 +25,20 @@ app.post('/research/analyze-word', async (c) => {
 
         return c.json(result)
     } catch (e: any) {
-        console.error(e)
+        console.error('Word Analysis Error:', e)
         return c.json({ error: e.message || 'Analysis failed' }, 500)
     }
 })
 
 app.post('/research/chat', async (c) => {
     const { context, message, history } = await c.req.json()
-    const apiKey = c.env.DEEPSEEK_API_KEY || 'sk-82c2ebfddf04478d9ded022dcbf73ac8'
 
     try {
-        const deepseek = new DeepSeekClient(apiKey)
-        const response = await deepseek.chat({ context, message, history })
+        const ai = new CloudflareAIClient(c.env)
+        const response = await ai.chat({ context, message, history })
         return c.json({ message: response })
     } catch (e: any) {
-        console.error(e)
+        console.error('Research Chat Error:', e)
         return c.json({ error: e.message || 'Chat failed' }, 500)
     }
 })

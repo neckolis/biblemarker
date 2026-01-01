@@ -1,9 +1,12 @@
-export class DeepSeekClient {
-    private apiKey: string;
-    private baseUrl = 'https://api.deepseek.com';
+import { Env } from './types';
 
-    constructor(apiKey: string) {
-        this.apiKey = apiKey;
+const LLM_MODEL = '@cf/meta/llama-3.1-8b-instruct' as any;
+
+export class CloudflareAIClient {
+    private env: Env;
+
+    constructor(env: Env) {
+        this.env = env;
     }
 
     async analyzeWord(params: {
@@ -19,8 +22,8 @@ export class DeepSeekClient {
     }) {
         const systemPrompt = `You are an expert biblical scholar and linguist specializing in Hebrew and Greek. 
 Analyze the specific word or phrase clicked by the user within the context of the provided verse.
-Output ONLY valid JSON matching the schema. Do not include any other text. 
-Use your best judgment for Strong's numbers and morphology. 
+Output ONLY valid JSON matching the schema. Do not include any other text, markdown formatting (like \`\`\`json), or explanations.
+
 JSON Schema:
 {
   "reference": { "book": "string", "chapter": 0, "verse": 0, "translation": "string" },
@@ -50,31 +53,27 @@ Clicked Text: "${params.clickedText}" at position ${params.clickedStart}-${param
 
 Provide a detailed word study analysis for "${params.clickedText}" specifically in the context of Verse ${params.verse}.`;
 
-        const response = await fetch(`${this.baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.apiKey}`
-            },
-            body: JSON.stringify({
-                model: 'deepseek-chat',
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userPrompt }
-                ],
-                response_format: { type: 'json_object' },
-                temperature: 0.2,
-                max_tokens: 2000
-            })
+        const response = await this.env.AI.run(LLM_MODEL, {
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+            ],
+            // Use response_format if supported, or just trust the system prompt
+            // Workers AI supports some JSON schema stuff now, but simple system prompt is often safer for legacy compatibility
+            temperature: 0.1, // Lower temperature for more consistency in JSON
+            max_tokens: 2000
         });
 
-        if (!response.ok) {
-            const err = await response.text();
-            throw new Error(`DeepSeek API error: ${err}`);
-        }
+        const content = (response as any).response;
 
-        const data = await response.json() as any;
-        return JSON.parse(data.choices[0].message.content);
+        try {
+            // Clean up potentially wrapped JSON (some models still wrap in backticks even if told not to)
+            const jsonStr = content.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
+            return JSON.parse(jsonStr);
+        } catch (e) {
+            console.error('Failed to parse Cloudflare AI response as JSON:', content);
+            throw new Error('AI failed to return valid JSON word analysis');
+        }
     }
 
     async chat(params: {
@@ -99,30 +98,16 @@ Answer the user's questions concisely and accurately, focusing on the original l
 
         const messages = [
             { role: 'system', content: systemPrompt },
-            ...(params.history || []),
+            ...(params.history || []).map(h => ({ role: h.role as any, content: h.content })),
             { role: 'user', content: params.message }
         ];
 
-        const response = await fetch(`${this.baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.apiKey}`
-            },
-            body: JSON.stringify({
-                model: 'deepseek-chat',
-                messages: messages,
-                temperature: 0.5,
-                max_tokens: 1000
-            })
+        const response = await this.env.AI.run(LLM_MODEL, {
+            messages: messages,
+            temperature: 0.5,
+            max_tokens: 1000
         });
 
-        if (!response.ok) {
-            const err = await response.text();
-            throw new Error(`DeepSeek API error: ${err}`);
-        }
-
-        const data = await response.json() as any;
-        return data.choices[0].message.content;
+        return (response as any).response;
     }
 }

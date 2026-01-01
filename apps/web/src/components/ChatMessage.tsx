@@ -107,6 +107,8 @@ function formatMarkdown(text: string): string {
         // Line breaks (preserve double newlines as paragraphs)
         .replace(/\n\n/g, '</p><p>')
         .replace(/\n/g, '<br>')
+        // Markdown Links: [Title](URL)
+        .replace(/\[(.+?)\]\((https?:\/\/.+?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="chat-link">$1 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-left:2px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y1="3"></line></svg></a>')
         // Wrap in paragraph
         .replace(/^/, '<p>')
         .replace(/$/, '</p>')

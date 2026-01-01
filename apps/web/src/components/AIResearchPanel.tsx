@@ -18,9 +18,10 @@ interface Props {
     };
     onClose: () => void;
     onAnalysisSuccess?: (strongs: string) => void;
+    customTitle?: string;
 }
 
-export function AIResearchPanel({ context, clicked, onClose, onAnalysisSuccess }: Props) {
+export function AIResearchPanel({ context, clicked, onClose, onAnalysisSuccess, customTitle }: Props) {
     const [data, setData] = useState<any>(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -114,7 +115,7 @@ export function AIResearchPanel({ context, clicked, onClose, onAnalysisSuccess }
         <div className="ai-research-panel">
             <header className="ai-header">
                 <div className="header-top">
-                    <div className="ai-badge">{clicked ? 'AI WORD STUDY' : 'BIBLE STUDY CHAT'}</div>
+                    <div className="ai-badge">{customTitle || (clicked ? 'AI WORD STUDY' : 'BIBLE STUDY CHAT')}</div>
                     <button onClick={onClose} className="close-btn">×</button>
                 </div>
                 {clicked && (
@@ -188,33 +189,6 @@ export function AIResearchPanel({ context, clicked, onClose, onAnalysisSuccess }
                             </div>
                         ))}
 
-                        <div className="resources-section">
-                            <div className="section-title">Further Reading</div>
-                            <a
-                                href={`https://www.preceptaustin.org/${context.book.toLowerCase().replace(/\s/g, '-')}-${context.chapter}-commentary`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="resource-link"
-                            >
-                                <span className="icon">📖</span>
-                                <div>
-                                    <div className="link-title">Precept Austin Commentary</div>
-                                    <div className="link-desc">Verse-by-verse study for {context.book} {context.chapter}</div>
-                                </div>
-                            </a>
-                            <a
-                                href="https://www.preceptaustin.org/verse-by-verse-comments-entire-new-testament"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="resource-link secondary"
-                            >
-                                <span className="icon">🔗</span>
-                                <div>
-                                    <div className="link-title">All Verse-by-Verse Reources</div>
-                                    <div className="link-desc">Index of all available commentaries</div>
-                                </div>
-                            </a>
-                        </div>
 
                         <div className="chat-section">
                             <div className="section-title">Word Study Chat</div>
@@ -239,23 +213,7 @@ export function AIResearchPanel({ context, clicked, onClose, onAnalysisSuccess }
                     </div>
                 ) : (
                     // General Chat Mode View (no data)
-                    <div className="analysis-results">
-                        <div className="resources-section">
-                            <div className="section-title">Further Reading</div>
-                            <a
-                                href={`https://www.preceptaustin.org/${context.book.toLowerCase().replace(/\s/g, '-')}-${context.chapter}-commentary`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="resource-link"
-                            >
-                                <span className="icon">📖</span>
-                                <div>
-                                    <div className="link-title">Precept Austin Commentary</div>
-                                    <div className="link-desc">Verse-by-verse study for {context.book} {context.chapter}</div>
-                                </div>
-                            </a>
-                        </div>
-
+                    <div className="analysis-results" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                         <div className="chat-section" style={{ flexGrow: 1 }}>
                             <div className="section-title">Study Assistant</div>
                             <div className="chat-messages" style={{ maxHeight: 'none', flexGrow: 1 }}>
@@ -289,7 +247,7 @@ export function AIResearchPanel({ context, clicked, onClose, onAnalysisSuccess }
             </div>
 
             <style>{STYLES}</style>
-        </div>
+        </div >
     )
 }
 

@@ -25,6 +25,7 @@ interface ChatContext {
 
 interface UseAIChatOptions {
     context?: ChatContext;
+    inductiveMode?: boolean;
     onError?: (error: Error) => void;
 }
 
@@ -77,7 +78,8 @@ export function useAIChat(options: UseAIChatOptions = {}) {
                     body: JSON.stringify({
                         message: content,
                         conversation_id: conversationId,
-                        context: options.context
+                        context: options.context,
+                        inductive_mode: options.inductiveMode
                     }),
                     signal: abortControllerRef.current.signal
                 });
@@ -134,7 +136,8 @@ export function useAIChat(options: UseAIChatOptions = {}) {
                     body: JSON.stringify({
                         message: content,
                         conversation_id: conversationId,
-                        context: options.context
+                        context: options.context,
+                        inductive_mode: options.inductiveMode
                     }),
                     signal: abortControllerRef.current.signal
                 });

@@ -19,54 +19,57 @@ export interface Verse {
     text: string;
 }
 
-export async function getTranslations(): Promise<Translation[]> {
-    const { data: { session } } = await supabase.auth.getSession()
-    const headers: any = {}
-    if (session) headers['Authorization'] = `Bearer ${session.access_token}`
+/**
+ * Helper to get auth headers without blocking indefinitely if Supabase is slow
+ */
+async function getAuthHeaders(): Promise<Record<string, string>> {
+    const headers: Record<string, string> = {};
+    try {
+        // Use getSession but with a timeout or just check local state if possible
+        //supabase.auth.getSession() usually returns local state immediately
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+    } catch (e) {
+        console.warn('Failed to get Supabase session, proceeding as guest:', e);
+    }
+    return headers;
+}
 
-    const res = await fetch(`${API_BASE}/translations`, { headers })
-    if (!res.ok) throw new Error('Failed to fetch translations')
-    return res.json()
+export async function getTranslations(): Promise<Translation[]> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/translations`, { headers });
+    if (!res.ok) throw new Error('Failed to fetch translations');
+    return res.json();
 }
 
 export async function getBooks(translation: string): Promise<Book[]> {
-    const { data: { session } } = await supabase.auth.getSession()
-    const headers: any = {}
-    if (session) headers['Authorization'] = `Bearer ${session.access_token}`
-
-    const res = await fetch(`${API_BASE}/books?translation=${translation}`, { headers })
-    if (!res.ok) throw new Error('Failed to fetch books')
-    return res.json()
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/books?translation=${translation}`, { headers });
+    if (!res.ok) throw new Error('Failed to fetch books');
+    return res.json();
 }
 
 export async function getChapter(translation: string, bookId: number, chapter: number): Promise<Verse[]> {
-    const { data: { session } } = await supabase.auth.getSession()
-    const headers: any = {}
-    if (session) headers['Authorization'] = `Bearer ${session.access_token}`
-
-    const res = await fetch(`${API_BASE}/chapters?translation=${translation}&book=${bookId}&chapter=${chapter}`, { headers })
-    if (!res.ok) throw new Error('Failed to fetch chapter')
-    return res.json()
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/chapters?translation=${translation}&book=${bookId}&chapter=${chapter}`, { headers });
+    if (!res.ok) throw new Error('Failed to fetch chapter');
+    return res.json();
 }
 
 export async function searchScripture(translation: string, query: string): Promise<any[]> {
-    const { data: { session } } = await supabase.auth.getSession()
-    const headers: any = {}
-    if (session) headers['Authorization'] = `Bearer ${session.access_token}`
-
-    const res = await fetch(`${API_BASE}/search?translation=${translation}&query=${encodeURIComponent(query)}`, { headers })
-    if (!res.ok) throw new Error('Failed to search scripture')
-    return res.json()
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/search?translation=${translation}&query=${encodeURIComponent(query)}`, { headers });
+    if (!res.ok) throw new Error('Failed to search scripture');
+    return res.json();
 }
 
 export async function getLexicon(dict: 'BDBT' | 'RUSD', query: string): Promise<any> {
-    const { data: { session } } = await supabase.auth.getSession()
-    const headers: any = {}
-    if (session) headers['Authorization'] = `Bearer ${session.access_token}`
-
-    const res = await fetch(`${API_BASE}/lexicon?dict=${dict}&query=${encodeURIComponent(query)}`, { headers })
-    if (!res.ok) throw new Error('Failed to fetch lexicon')
-    return res.json()
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/lexicon?dict=${dict}&query=${encodeURIComponent(query)}`, { headers });
+    if (!res.ok) throw new Error('Failed to fetch lexicon');
+    return res.json();
 }
 
 export async function analyzeWord(params: {

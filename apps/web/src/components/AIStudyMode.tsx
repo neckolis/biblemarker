@@ -11,6 +11,7 @@ import {
     Search,
     X
 } from 'lucide-react';
+import { BIBLE_BOOKS } from '@precept/shared';
 
 interface Props {
     translation: string;
@@ -18,8 +19,12 @@ interface Props {
     chapter: number;
     bookName?: string;
 }
-
 export function AIStudyMode({ translation, bookId, chapter, bookName }: Props) {
+    const [inductiveMode, setInductiveMode] = useState(() => {
+        const saved = localStorage.getItem('ai_inductive_mode');
+        return saved === null ? true : saved === 'true';
+    });
+
     const {
         messages,
         conversationId,
@@ -33,7 +38,8 @@ export function AIStudyMode({ translation, bookId, chapter, bookName }: Props) {
         stopStreaming,
         copyMessage
     } = useAIChat({
-        context: { translation, book_id: bookId, chapter }
+        context: { translation, book_id: bookId, chapter },
+        inductiveMode
     });
 
     const [input, setInput] = useState('');
@@ -42,6 +48,11 @@ export function AIStudyMode({ translation, bookId, chapter, bookName }: Props) {
     const [showSearch, setShowSearch] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
+
+    // Persist toggle
+    useEffect(() => {
+        localStorage.setItem('ai_inductive_mode', String(inductiveMode));
+    }, [inductiveMode]);
 
     // Load conversations list
     useEffect(() => {
@@ -101,10 +112,30 @@ export function AIStudyMode({ translation, bookId, chapter, bookName }: Props) {
         <div className="ai-study-container">
             {/* Context Pill */}
             <div className="ai-study-header">
-                <div className="context-pill">
-                    <span className="context-icon">📖</span>
-                    <span>{bookName || `Book ${bookId}`} {chapter} ({translation})</span>
+                <div className="header-left">
+                    <div className="context-pill">
+                        <span className="context-icon">📖</span>
+                        <span>{bookName || BIBLE_BOOKS[bookId] || `Book ${bookId}`} {chapter} ({translation})</span>
+                    </div>
                 </div>
+
+                <div className="header-center">
+                    <div className="mode-toggle">
+                        <button
+                            className={`mode-toggle-btn ${!inductiveMode ? 'active' : ''}`}
+                            onClick={() => setInductiveMode(false)}
+                        >
+                            General
+                        </button>
+                        <button
+                            className={`mode-toggle-btn ${inductiveMode ? 'active' : ''}`}
+                            onClick={() => setInductiveMode(true)}
+                        >
+                            Inductive
+                        </button>
+                    </div>
+                </div>
+
                 <div className="header-actions">
                     <button
                         className="icon-btn"
@@ -264,6 +295,41 @@ export function AIStudyMode({ translation, bookId, chapter, bookName }: Props) {
                     background: #fff;
                     border-bottom: 1px solid #e2e8f0;
                     flex-shrink: 0;
+                }
+
+                .header-center {
+                    display: flex;
+                    align-items: center;
+                }
+
+                .mode-toggle {
+                    display: flex;
+                    background: #f1f5f9;
+                    padding: 0.25rem;
+                    border-radius: 8px;
+                    gap: 0.25rem;
+                }
+
+                .mode-toggle-btn {
+                    border: none;
+                    background: none;
+                    padding: 0.4rem 0.75rem;
+                    border-radius: 6px;
+                    font-size: 0.8rem;
+                    font-weight: 500;
+                    color: #64748b;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+
+                .mode-toggle-btn:hover {
+                    color: #334155;
+                }
+
+                .mode-toggle-btn.active {
+                    background: #fff;
+                    color: #3b82f6;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
                 }
 
                 .context-pill {

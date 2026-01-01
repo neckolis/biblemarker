@@ -22,7 +22,6 @@ export interface Env {
     SUPABASE_ANON_KEY: string;
     SUPABASE_SERVICE_ROLE_KEY?: string;
     ENABLE_AUTH: string;
-    DEEPSEEK_API_KEY?: string;
     ADMIN_SECRET?: string;
 }
 
@@ -94,10 +93,12 @@ export interface ChatRequest {
         translation: string;
         book_id: number;
         chapter: number;
-        verse_start?: number;
-        verse_end?: number;
     };
+    inductive_mode?: boolean;
+    stream?: boolean;
 }
+
+export { BIBLE_BOOKS } from '@precept/shared';
 
 export interface ChatResponse {
     conversation_id: string;

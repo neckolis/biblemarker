@@ -41,18 +41,10 @@ interface WordSuggestion {
     count: number;
 }
 
-const INDUCTIVE_PRESETS = [
-    { name: 'God', color: '#a855f7', style: 'highlight' as AnnotationStyle, symbol: '△', label: 'God' },
-    { name: 'Jesus', color: '#ef4444', style: 'underline' as AnnotationStyle, symbol: '†', label: 'Jesus' },
-    { name: 'Holy Spirit', color: '#3b82f6', style: 'highlight' as AnnotationStyle, symbol: '☁', label: 'Spirit' },
-    { name: 'Therefore', color: '#f97316', style: 'underline' as AnnotationStyle, symbol: '→', label: 'Result' },
-    { name: 'But', color: '#f97316', style: 'underline' as AnnotationStyle, symbol: '≠', label: 'Contrast' },
-    { name: 'List', color: '#eab308', style: 'highlight' as AnnotationStyle, symbol: '≡', label: 'List' },
-];
 
 export function SelectionToolbar({ onApplyStyle, onClear, isVisible, onClose }: SelectionToolbarProps) {
     const [isOpen, setIsOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState<'highlight' | 'underline' | 'symbols' | 'inductive'>('highlight');
+    const [activeTab, setActiveTab] = useState<'highlight' | 'underline' | 'symbols'>('highlight');
     const [savedRange, setSavedRange] = useState<Range | null>(null);
     const [selectedText, setSelectedText] = useState('');
 
@@ -252,13 +244,6 @@ export function SelectionToolbar({ onApplyStyle, onClear, isVisible, onClose }: 
                         >
                             Symbols
                         </button>
-                        <button
-                            className={`tab-btn ${activeTab === 'inductive' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('inductive')}
-                            style={{ color: '#fbbf24' }}
-                        >
-                            Inductive
-                        </button>
                     </div>
 
                     <div className="toolbar-content">
@@ -306,29 +291,6 @@ export function SelectionToolbar({ onApplyStyle, onClear, isVisible, onClose }: 
                                     perLine={8}
                                     maxFrequentRows={1}
                                 />
-                            </div>
-                        ) : activeTab === 'inductive' ? (
-                            <div className="inductive-grid">
-                                {INDUCTIVE_PRESETS.map((preset) => (
-                                    <button
-                                        key={preset.name}
-                                        className="inductive-btn"
-                                        onClick={() => handleApply(preset.style, preset.color)}
-                                    >
-                                        <div className="preset-symbol" style={{ color: preset.color }}>{preset.symbol}</div>
-                                        <div className="preset-label">{preset.label}</div>
-                                    </button>
-                                ))}
-                                <div className="toolbar-actions" style={{ gridColumn: 'span 3', marginTop: '8px' }}>
-                                    <div className="esc-hint">
-                                        <span className="shortcut-hint">ESC</span> to Close
-                                    </div>
-                                    <div style={{ flexGrow: 1 }} />
-                                    <button className="action-btn clear" title="Clear (C)" onClick={handleClearAction}>
-                                        <Trash2 size={18} />
-                                        <span className="shortcut-hint">C</span>
-                                    </button>
-                                </div>
                             </div>
                         ) : (
                             <>
