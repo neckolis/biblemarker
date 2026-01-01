@@ -363,8 +363,7 @@ app.post('/search', async (c) => {
 
             const vectorResults = await c.env.VECTORIZE.query(embedding.data[0], {
                 topK: limit,
-                returnMetadata: 'all',
-                filter: { type: { $eq: 'precept' } }
+                returnMetadata: 'all'
             });
 
             for (const match of vectorResults.matches) {

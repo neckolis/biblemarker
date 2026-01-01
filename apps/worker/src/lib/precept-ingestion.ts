@@ -139,7 +139,7 @@ async function fetchWithThrottle(url: string): Promise<string | null> {
  */
 function buildPreceptUrl(book: string, chapter: number): string {
     const slug = BOOK_SLUGS[book] || book.toLowerCase().replace(/\s+/g, '_');
-    return `https://www.preceptaustin.org/${slug}-${chapter}-commentary`;
+    return `https://www.preceptaustin.org/${slug}_${chapter}_resources`;
 }
 
 /**

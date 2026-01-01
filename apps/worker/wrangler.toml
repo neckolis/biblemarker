@@ -9,7 +9,7 @@
 
 name = "trout"
 main = "src/index.ts"
-compatibility_date = "2024-01-29"
+compatibility_date = "2024-12-30"
 
 # =============================================================================
 # AI BINDINGS (Workers AI)
@@ -43,10 +43,10 @@ binding = "DB"
 database_name = "inductive-bible-db"
 database_id = "local"  # Placeholder for local dev
 
-# Vectorize - Dev (requires actual index for dev)
-# [[vectorize]]
-# binding = "VECTORIZE"
-# index_name = "precept-embeddings"
+# Vectorize - Dev (using staging index for testing)
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "precept-embeddings-staging"
 
 # =============================================================================
 # STAGING ENVIRONMENT (`wrangler deploy --env staging`)
@@ -63,6 +63,9 @@ ENABLE_AUTH = "true"
 SUPABASE_URL = "https://mwibyylfnfxojdxsbzga.supabase.co"
 SUPABASE_ANON_KEY = "sb_publishable_ViDArTpEg-NOc2pzPy360g_nuOb1fZT"
 
+[env.staging.ai]
+binding = "AI"
+
 [[env.staging.kv_namespaces]]
 binding = "BIBLE_CACHE"
 id = "49558b44421f4a858078fd358f176310"
@@ -72,7 +75,7 @@ id = "49558b44421f4a858078fd358f176310"
 [[env.staging.d1_databases]]
 binding = "DB"
 database_name = "inductive-bible-db-staging"
-database_id = "REPLACE_WITH_STAGING_DB_ID"
+database_id = "97833613-dd73-4c01-b319-9dbe8f3f0158"
 
 # Vectorize - Staging
 # NOTE: Create with: wrangler vectorize create precept-embeddings-staging --dimensions=768 --metric=cosine
@@ -99,6 +102,9 @@ ENABLE_AUTH = "true"
 SUPABASE_URL = "https://mwibyylfnfxojdxsbzga.supabase.co"
 SUPABASE_ANON_KEY = "sb_publishable_ViDArTpEg-NOc2pzPy360g_nuOb1fZT"
 
+[env.production.ai]
+binding = "AI"
+
 [[env.production.kv_namespaces]]
 binding = "BIBLE_CACHE"
 id = "a90045ce6c8f404a8c7db45b274f0532"
@@ -108,7 +114,7 @@ id = "a90045ce6c8f404a8c7db45b274f0532"
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "inductive-bible-db-prod"
-database_id = "REPLACE_WITH_PROD_DB_ID"
+database_id = "434f53ed-8cd3-4e90-b6bd-e2eb9b570837"
 
 # Vectorize - Production
 # NOTE: Create with: wrangler vectorize create precept-embeddings-prod --dimensions=768 --metric=cosine

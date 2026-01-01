@@ -1,15 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAIChat } from '../hooks/useAIChat';
+import { AISearchBar } from './AISearchBar';
+import { ChatMessage } from './ChatMessage';
 import {
     Send,
-    RefreshCw,
-    Copy,
-    Check,
     MessageSquare,
     Plus,
     ChevronRight,
     Loader2,
-    ExternalLink,
+    Search,
     X
 } from 'lucide-react';
 
@@ -40,7 +39,7 @@ export function AIStudyMode({ translation, bookId, chapter, bookName }: Props) {
     const [input, setInput] = useState('');
     const [showConversations, setShowConversations] = useState(false);
     const [conversations, setConversations] = useState<any[]>([]);
-    const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [showSearch, setShowSearch] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -65,6 +64,18 @@ export function AIStudyMode({ translation, bookId, chapter, bookName }: Props) {
         }
     }, [input]);
 
+    // Cmd+K shortcut for search
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                setShowSearch(true);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (input.trim() && !isLoading) {
@@ -80,11 +91,6 @@ export function AIStudyMode({ translation, bookId, chapter, bookName }: Props) {
         }
     };
 
-    const handleCopy = async (id: string) => {
-        await copyMessage(id);
-        setCopiedId(id);
-        setTimeout(() => setCopiedId(null), 2000);
-    };
 
     const handleFollowUp = (question: string) => {
         setInput(question);
@@ -114,6 +120,13 @@ export function AIStudyMode({ translation, bookId, chapter, bookName }: Props) {
                     >
                         <Plus size={18} />
                     </button>
+                    <button
+                        className="icon-btn"
+                        onClick={() => setShowSearch(true)}
+                        title="Search (Cmd+K)"
+                    >
+                        <Search size={18} />
+                    </button>
                 </div>
             </div>
 
@@ -130,7 +143,7 @@ export function AIStudyMode({ translation, bookId, chapter, bookName }: Props) {
                         {conversations.length === 0 && (
                             <p className="empty-state">No conversations yet</p>
                         )}
-                        {conversations.map(conv => (
+                        {conversations.map((conv: any) => (
                             <button
                                 key={conv.id}
                                 className={`conversation-item ${conv.id === conversationId ? 'active' : ''}`}
@@ -168,57 +181,13 @@ export function AIStudyMode({ translation, bookId, chapter, bookName }: Props) {
                 )}
 
                 {messages.map(msg => (
-                    <div key={msg.id} className={`message ${msg.role}`}>
-                        <div className="message-content">
-                            {msg.role === 'assistant' ? (
-                                <div className="markdown-content" dangerouslySetInnerHTML={{
-                                    __html: formatMarkdown(msg.content)
-                                }} />
-                            ) : (
-                                <p>{msg.content}</p>
-                            )}
-                        </div>
-
-                        {/* Sources */}
-                        {msg.sources && msg.sources.length > 0 && (
-                            <div className="sources-section">
-                                <span className="sources-label">Sources:</span>
-                                {msg.sources.map((source, idx) => (
-                                    <span key={idx} className={`source-pill ${source.type}`}>
-                                        {source.type === 'precept' && source.url ? (
-                                            <a href={source.url} target="_blank" rel="noopener noreferrer">
-                                                {source.reference || 'PreceptAustin'}
-                                                <ExternalLink size={10} />
-                                            </a>
-                                        ) : (
-                                            source.reference
-                                        )}
-                                    </span>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Message Actions */}
-                        {msg.role === 'assistant' && (
-                            <div className="message-actions">
-                                <button
-                                    className="action-btn"
-                                    onClick={() => handleCopy(msg.id)}
-                                    title="Copy"
-                                >
-                                    {copiedId === msg.id ? <Check size={14} /> : <Copy size={14} />}
-                                </button>
-                                <button
-                                    className="action-btn"
-                                    onClick={regenerate}
-                                    disabled={isLoading}
-                                    title="Regenerate"
-                                >
-                                    <RefreshCw size={14} />
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                    <ChatMessage
+                        key={msg.id}
+                        message={msg as any}
+                        onCopy={copyMessage}
+                        onRegenerate={msg.role === 'assistant' ? regenerate : undefined}
+                        isLoading={isLoading}
+                    />
                 ))}
 
                 {/* Streaming indicator */}
@@ -271,6 +240,12 @@ export function AIStudyMode({ translation, bookId, chapter, bookName }: Props) {
                     {isLoading ? <Loader2 size={18} className="spin" /> : <Send size={18} />}
                 </button>
             </form>
+
+            {/* Search Bar */}
+            <AISearchBar
+                isOpen={showSearch}
+                onClose={() => setShowSearch(false)}
+            />
 
             <style>{`
                 .ai-study-container {
@@ -622,9 +597,15 @@ export function AIStudyMode({ translation, bookId, chapter, bookName }: Props) {
 
                 .empty-state {
                     color: #94a3b8;
-                    text-align: center;
-                    padding: 1rem;
-                    font-size: 0.85rem;
+                    cursor: pointer;
+                }
+
+                .markdown-content p {
+                    margin: 0 0 1rem;
+                }
+
+                .markdown-content p:last-child {
+                    margin-bottom: 0;
                 }
 
                 .ai-study-composer {
@@ -689,33 +670,4 @@ export function AIStudyMode({ translation, bookId, chapter, bookName }: Props) {
             `}</style>
         </div>
     );
-}
-
-/**
- * Simple markdown-like formatting
- */
-function formatMarkdown(text: string): string {
-    if (!text) return '';
-
-    return text
-        // Headers
-        .replace(/\*\*OBSERVATION\*\*/g, '<h3>📖 OBSERVATION</h3>')
-        .replace(/\*\*INTERPRETATION\*\*/g, '<h3>🔍 INTERPRETATION</h3>')
-        .replace(/\*\*APPLICATION\*\*/g, '<h3>✅ APPLICATION</h3>')
-        // Bold
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        // Italic
-        .replace(/\*(.+?)\*/g, '<em>$1</em>')
-        // Line breaks (preserve double newlines as paragraphs)
-        .replace(/\n\n/g, '</p><p>')
-        .replace(/\n/g, '<br>')
-        // Wrap in paragraph
-        .replace(/^/, '<p>')
-        .replace(/$/, '</p>')
-        // Clean up empty paragraphs
-        .replace(/<p><\/p>/g, '')
-        .replace(/<p><br>/g, '<p>')
-        // Lists (simple)
-        .replace(/<br>- /g, '</p><ul><li>')
-        .replace(/<li>(.+?)(<br>|<\/p>)/g, '<li>$1</li>$2');
 }
