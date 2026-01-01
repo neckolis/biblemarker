@@ -13,7 +13,6 @@ import { getSelectedAnnotations, clearIntersectingAnnotations, applyAnnotationSm
 import { parseReference } from './lib/navigation-utils'
 import { getBooks, Book } from './lib/api'
 import { ResearchMode } from './components/ResearchMode'
-import { PreceptStudyPanel } from './components/PreceptStudyPanel'
 import { AIStudyMode } from './components/AIStudyMode'
 import { AuthModal } from './components/AuthModal'
 import { X, BookOpen, FlaskConical, LogOut, User, Sparkles } from 'lucide-react'
@@ -446,9 +445,6 @@ function AppContent() {
                                         chapter={selection.c}
                                         targetVerse={selection.v}
                                     />
-                                </div>
-                                <div style={{ width: '400px', borderLeft: '1px solid #e2e8f0', flexShrink: 0 }} className="hide-on-mobile">
-                                    <PreceptStudyPanel />
                                 </div>
                             </div>
                         )}

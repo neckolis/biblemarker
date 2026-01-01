@@ -40,7 +40,9 @@ JSON Schema:
     }
   ],
   "warnings": ["string"]
-}`;
+}
+
+IMPORTANT: The final bullet point in "explanationBullets" MUST ALWAYS connect the word or its theme to Jesus Christ, His character, His work, or His fulfillment of Scripture. Do not label it explicitly as 'Jesus tie-in', just make it the final natural point of the analysis.`;
 
         const contextStr = params.surroundingContext
             ? params.surroundingContext.map(v => `Verse ${v.verse}: ${v.text}`).join('\n')

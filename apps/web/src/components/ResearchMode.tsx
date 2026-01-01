@@ -164,6 +164,26 @@ export function ResearchMode({ translation, bookId, chapter, targetVerse }: Prop
             console.error('Failed to load research data', err)
         }).finally(() => setLoading(false))
     }, [effectiveEnglish, effectiveOriginal, bookId, chapter, bookName, currentTranslation]);
+    // Patch "Unknown Book" in tabs once book names load
+    useEffect(() => {
+        if (bookName !== 'Unknown Book') {
+            setTabs(prev => prev.map(tab => {
+                if (tab.data.context && tab.data.context.book === 'Unknown Book') {
+                    return {
+                        ...tab,
+                        data: {
+                            ...tab.data,
+                            context: {
+                                ...tab.data.context,
+                                book: bookName
+                            }
+                        }
+                    };
+                }
+                return tab;
+            }));
+        }
+    }, [bookName]);
 
     // Scroll to target verse
     useEffect(() => {

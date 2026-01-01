@@ -118,11 +118,6 @@ export function AIResearchPanel({ context, clicked, onClose, onAnalysisSuccess, 
                     <div className="ai-badge">{customTitle || (clicked ? 'AI WORD STUDY' : 'BIBLE STUDY CHAT')}</div>
                     <button onClick={onClose} className="close-btn">×</button>
                 </div>
-                {clicked && (
-                    <div className="disclaimer">
-                        <span className="warning-icon">⚠</span> AI-generated research—verify with trusted sources.
-                    </div>
-                )}
             </header>
 
             <div className="ai-content" ref={scrollRef}>
@@ -183,9 +178,6 @@ export function AIResearchPanel({ context, clicked, onClose, onAnalysisSuccess, 
                                     </ul>
                                 </div>
 
-                                <div className="report-incorrect">
-                                    <button className="btn-link">Report incorrect result</button>
-                                </div>
                             </div>
                         ))}
 
@@ -221,7 +213,7 @@ export function AIResearchPanel({ context, clicked, onClose, onAnalysisSuccess, 
                                     <div className="msg assistant">
                                         <div className="msg-content">
                                             Hello! I'm your research assistant for {context.book} {context.chapter}.
-                                            Ask me anything about the context, history, or meaning of this passage.
+                                            Select a word to perform a word study. Ask anything in that chat about the context, history, or meaning.
                                         </div>
                                     </div>
                                 )}
