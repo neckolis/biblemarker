@@ -14,8 +14,9 @@ import { parseReference } from './lib/navigation-utils'
 import { getBooks, Book } from './lib/api'
 import { ResearchMode } from './components/ResearchMode'
 import { PreceptStudyPanel } from './components/PreceptStudyPanel'
+import { AIStudyMode } from './components/AIStudyMode'
 import { AuthModal } from './components/AuthModal'
-import { X, BookOpen, FlaskConical, LogOut, User } from 'lucide-react'
+import { X, BookOpen, FlaskConical, LogOut, User, Sparkles } from 'lucide-react'
 import './index.css'
 
 function ExistingDocsList({ onSelect }: { onSelect: (id: string) => void }) {
@@ -223,6 +224,12 @@ function AppContent() {
                             >
                                 Study
                             </button>
+                            <button
+                                className={`mode-tab ${mode === 'ai-study' ? 'active' : ''}`}
+                                onClick={() => setMode('ai-study')}
+                            >
+                                <Sparkles size={14} /> AI
+                            </button>
                         </nav>
 
                         {/* Title input - hidden on mobile */}
@@ -326,6 +333,12 @@ function AppContent() {
                                     onClick={() => { setMode('research'); setMobileMenuOpen(false); }}
                                 >
                                     <FlaskConical size={20} /> Study Mode
+                                </button>
+                                <button
+                                    className={`mobile-menu-item ${mode === 'ai-study' ? 'active' : ''}`}
+                                    onClick={() => { setMode('ai-study'); setMobileMenuOpen(false); }}
+                                >
+                                    <Sparkles size={20} /> AI Study
                                 </button>
                             </div>
 
@@ -437,6 +450,23 @@ function AppContent() {
                                 <div style={{ width: '400px', borderLeft: '1px solid #e2e8f0', flexShrink: 0 }} className="hide-on-mobile">
                                     <PreceptStudyPanel />
                                 </div>
+                            </div>
+                        )}
+
+                        {/* AI Study Layer */}
+                        {mode === 'ai-study' && selection && (
+                            <div className="ai-study-layer" style={{
+                                position: 'absolute',
+                                inset: 0,
+                                zIndex: 20,
+                                background: '#f8fafc',
+                            }}>
+                                <AIStudyMode
+                                    translation={selection.t}
+                                    bookId={selection.b}
+                                    chapter={selection.c}
+                                    bookName={books.find(b => b.bookid === selection.b)?.name}
+                                />
                             </div>
                         )}
                     </main>

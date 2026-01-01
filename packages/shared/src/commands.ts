@@ -1,4 +1,4 @@
-export type AppMode = 'read' | 'research';
+export type AppMode = 'read' | 'research' | 'ai-study';
 
 export interface CommandDefinition {
     id: string;
@@ -23,6 +23,13 @@ export const COMMANDS: Record<string, CommandDefinition> = {
         label: 'Switch to Research Mode',
         keywords: 'research lexicon greek hebrew original language',
         shortcut: ['r'],
+        section: 'Mode'
+    },
+    SWITCH_TO_AI_STUDY: {
+        id: 'switch-to-ai-study',
+        label: 'Switch to AI Study',
+        keywords: 'ai chat assistant perplexity inductive',
+        shortcut: ['a'],
         section: 'Mode'
     },
 

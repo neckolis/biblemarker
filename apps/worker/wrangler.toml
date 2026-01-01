@@ -12,6 +12,12 @@ main = "src/index.ts"
 compatibility_date = "2024-01-29"
 
 # =============================================================================
+# AI BINDINGS (Workers AI)
+# =============================================================================
+[ai]
+binding = "AI"
+
+# =============================================================================
 # DEFAULT/DEV ENVIRONMENT (used with `wrangler dev`)
 # =============================================================================
 # Serve static assets from the web app build directory
@@ -31,6 +37,17 @@ ENABLE_AUTH = "false"  # Auth disabled for rapid local development
 # binding = "BIBLE_CACHE"
 # id = "dev-bible-cache-preview" 
 
+# D1 Database - Dev (local persistence with wrangler dev --persist)
+[[d1_databases]]
+binding = "DB"
+database_name = "inductive-bible-db"
+database_id = "local"  # Placeholder for local dev
+
+# Vectorize - Dev (requires actual index for dev)
+# [[vectorize]]
+# binding = "VECTORIZE"
+# index_name = "precept-embeddings"
+
 # =============================================================================
 # STAGING ENVIRONMENT (`wrangler deploy --env staging`)
 # =============================================================================
@@ -49,6 +66,19 @@ SUPABASE_ANON_KEY = "sb_publishable_ViDArTpEg-NOc2pzPy360g_nuOb1fZT"
 [[env.staging.kv_namespaces]]
 binding = "BIBLE_CACHE"
 id = "49558b44421f4a858078fd358f176310"
+
+# D1 Database - Staging
+# NOTE: Create with: wrangler d1 create inductive-bible-db-staging
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "inductive-bible-db-staging"
+database_id = "REPLACE_WITH_STAGING_DB_ID"
+
+# Vectorize - Staging
+# NOTE: Create with: wrangler vectorize create precept-embeddings-staging --dimensions=768 --metric=cosine
+[[env.staging.vectorize]]
+binding = "VECTORIZE"
+index_name = "precept-embeddings-staging"
 
 # =============================================================================
 # PRODUCTION ENVIRONMENT (`wrangler deploy --env production`)
@@ -72,3 +102,16 @@ SUPABASE_ANON_KEY = "sb_publishable_ViDArTpEg-NOc2pzPy360g_nuOb1fZT"
 [[env.production.kv_namespaces]]
 binding = "BIBLE_CACHE"
 id = "a90045ce6c8f404a8c7db45b274f0532"
+
+# D1 Database - Production
+# NOTE: Create with: wrangler d1 create inductive-bible-db-prod
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "inductive-bible-db-prod"
+database_id = "REPLACE_WITH_PROD_DB_ID"
+
+# Vectorize - Production
+# NOTE: Create with: wrangler vectorize create precept-embeddings-prod --dimensions=768 --metric=cosine
+[[env.production.vectorize]]
+binding = "VECTORIZE"
+index_name = "precept-embeddings-prod"

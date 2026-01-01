@@ -3,6 +3,7 @@ import bible from './routes/bible'
 import documents from './routes/documents'
 import presets from './routes/presets'
 import ai from './routes/ai'
+import aiStudy from './routes/ai-study'
 
 const app = new Hono()
 
@@ -14,5 +15,6 @@ app.route('/api', bible)
 app.route('/api/documents', documents)
 app.route('/api/presets', presets)
 app.route('/api', ai)
+app.route('/api/ai-study', aiStudy)
 
 export default app
