@@ -16,6 +16,7 @@ import { getSelectedAnnotations, clearIntersectingAnnotations, applyAnnotationSm
 import { parseReference } from './lib/navigation-utils'
 import { getBooks, Book } from './lib/api'
 import { ResearchMode } from './components/ResearchMode'
+import { PreceptStudyPanel } from './components/PreceptStudyPanel'
 import { AuthModal } from './components/AuthModal'
 import { X, BookOpen, PenTool, FlaskConical, LogOut, User } from 'lucide-react'
 import './index.css'
@@ -257,7 +258,7 @@ function AppContent() {
                                 className={`mode-tab ${mode === 'research' ? 'active' : ''}`}
                                 onClick={() => setMode('research')}
                             >
-                                Research
+                                Study
                             </button>
                         </nav>
 
@@ -367,7 +368,7 @@ function AppContent() {
                                     className={`mobile-menu-item ${mode === 'research' ? 'active' : ''}`}
                                     onClick={() => { setMode('research'); setMobileMenuOpen(false); }}
                                 >
-                                    <FlaskConical size={20} /> Research Mode
+                                    <FlaskConical size={20} /> Study Mode
                                 </button>
                             </div>
 
@@ -480,14 +481,20 @@ function AppContent() {
                                 position: 'absolute',
                                 inset: 0,
                                 zIndex: 20,
-                                background: '#fff'
+                                background: '#fff',
+                                display: 'flex'
                             }}>
-                                <ResearchMode
-                                    translation={selection.t}
-                                    bookId={selection.b}
-                                    chapter={selection.c}
-                                    targetVerse={selection.v}
-                                />
+                                <div style={{ flexGrow: 1, minWidth: 0 }}>
+                                    <ResearchMode
+                                        translation={selection.t}
+                                        bookId={selection.b}
+                                        chapter={selection.c}
+                                        targetVerse={selection.v}
+                                    />
+                                </div>
+                                <div style={{ width: '400px', borderLeft: '1px solid #e2e8f0', flexShrink: 0 }} className="hide-on-mobile">
+                                    <PreceptStudyPanel />
+                                </div>
                             </div>
                         )}
                     </main>

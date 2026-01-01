@@ -7,7 +7,7 @@
 #   - production:    Live site with `wrangler deploy --env production`
 # =============================================================================
 
-name = "inductive-bible-worker"
+name = "trout"
 main = "src/index.ts"
 compatibility_date = "2024-01-29"
 
