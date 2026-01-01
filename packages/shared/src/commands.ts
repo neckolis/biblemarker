@@ -1,11 +1,11 @@
-export type AppMode = 'read' | 'draw' | 'research';
+export type AppMode = 'read' | 'research';
 
 export interface CommandDefinition {
     id: string;
     label: string;
     keywords: string;
     shortcut?: string[];
-    section: 'Mode' | 'Draw' | 'Navigation' | 'App';
+    section: 'Mode' | 'Navigation' | 'App';
     parent?: string;
 }
 
@@ -18,13 +18,6 @@ export const COMMANDS: Record<string, CommandDefinition> = {
         shortcut: ['v'], // or custom
         section: 'Mode'
     },
-    SWITCH_TO_DRAW: {
-        id: 'switch-to-draw',
-        label: 'Switch to Draw Mode',
-        keywords: 'draw sketch paint canvas',
-        shortcut: ['d'],
-        section: 'Mode'
-    },
     SWITCH_TO_RESEARCH: {
         id: 'switch-to-research',
         label: 'Switch to Research Mode',
@@ -33,22 +26,6 @@ export const COMMANDS: Record<string, CommandDefinition> = {
         section: 'Mode'
     },
 
-
-    // Draw Tools
-    ACTIVATE_TEXT_TOOL: {
-        id: 'activate-text-tool',
-        label: 'Text Tool',
-        keywords: 'text type write',
-        shortcut: ['$mod', 't'],
-        section: 'Draw'
-    },
-    ACTIVATE_DRAW_TOOL: {
-        id: 'activate-draw-tool',
-        label: 'Pen Tool',
-        keywords: 'draw pen pencil brush',
-        shortcut: ['$mod', 'd'],
-        section: 'Draw'
-    },
 
     // Navigation
     GO_TO_PASSAGE: {

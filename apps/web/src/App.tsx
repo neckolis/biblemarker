@@ -3,11 +3,8 @@ import { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import { BiblePicker } from './components/BiblePicker'
 import { BibleViewer } from './components/BibleViewer'
-import { Tldraw } from 'tldraw'
-import 'tldraw/tldraw.css'
 import { saveDocument, getDocuments, getDocument } from './lib/persistence'
 import { AppMode, Annotation, AnnotationStyle } from '@precept/shared'
-import { tldrawBridge } from './lib/tldraw-bridge'
 import { KBarProvider } from 'kbar'
 import { CommandPalette } from './components/CommandPalette'
 import { createActions } from './commands/registry'
@@ -18,7 +15,7 @@ import { getBooks, Book } from './lib/api'
 import { ResearchMode } from './components/ResearchMode'
 import { PreceptStudyPanel } from './components/PreceptStudyPanel'
 import { AuthModal } from './components/AuthModal'
-import { X, BookOpen, PenTool, FlaskConical, LogOut, User } from 'lucide-react'
+import { X, BookOpen, FlaskConical, LogOut, User } from 'lucide-react'
 import './index.css'
 
 function ExistingDocsList({ onSelect }: { onSelect: (id: string) => void }) {
@@ -109,13 +106,6 @@ function AppContent() {
         if (!selection) return alert('Select a chapter first')
         if (!session) return alert('Please sign in to save')
 
-        const editor = tldrawBridge.getEditor()
-        let shapes: any[] = []
-        if (editor) {
-            const snapshot = editor.store.getSnapshot()
-            shapes = Object.values(snapshot.store)
-        }
-
         try {
             const saved = await saveDocument({
                 id: docId || undefined,
@@ -123,7 +113,7 @@ function AppContent() {
                 translation: selection.t,
                 book_id: selection.b,
                 chapter: selection.c
-            }, annotations, shapes)
+            }, annotations, [])
 
             if (saved.id) {
                 setDocId(saved.id)
@@ -185,28 +175,7 @@ function AppContent() {
         const handleKeyDown = (e: KeyboardEvent) => {
             const isMod = e.metaKey || e.ctrlKey;
 
-            if (e.key === 'Escape' && mode === 'draw') {
-                if (document.activeElement === document.body) {
-                    setMode('read')
-                }
-                return;
-            }
-
-            if (isMod && e.key === 't') {
-                e.preventDefault();
-                setMode('draw');
-                setTimeout(() => {
-                    tldrawBridge.selectTool('text');
-                    tldrawBridge.focus();
-                }, 50);
-            } else if (isMod && e.key === 'd') {
-                e.preventDefault();
-                setMode('draw');
-                setTimeout(() => {
-                    tldrawBridge.selectTool('draw');
-                    tldrawBridge.focus();
-                }, 50);
-            } else if (isMod && e.key === 'g') {
+            if (isMod && e.key === 'g') {
                 e.preventDefault();
                 handleGoTo();
             } else if (isMod && e.key === 'r') {
@@ -247,12 +216,6 @@ function AppContent() {
                                 onClick={() => setMode('read')}
                             >
                                 Read
-                            </button>
-                            <button
-                                className={`mode-tab ${mode === 'draw' ? 'active' : ''}`}
-                                onClick={() => setMode('draw')}
-                            >
-                                Draw
                             </button>
                             <button
                                 className={`mode-tab ${mode === 'research' ? 'active' : ''}`}
@@ -359,12 +322,6 @@ function AppContent() {
                                     <BookOpen size={20} /> Read Mode
                                 </button>
                                 <button
-                                    className={`mobile-menu-item ${mode === 'draw' ? 'active' : ''}`}
-                                    onClick={() => { setMode('draw'); setMobileMenuOpen(false); }}
-                                >
-                                    <PenTool size={20} /> Draw Mode
-                                </button>
-                                <button
                                     className={`mobile-menu-item ${mode === 'research' ? 'active' : ''}`}
                                     onClick={() => { setMode('research'); setMobileMenuOpen(false); }}
                                 >
@@ -459,21 +416,6 @@ function AppContent() {
                             )}
                         </div>
 
-                        {/* Tldraw Layer */}
-                        <div className="tldraw-layer" style={{
-                            position: 'absolute',
-                            inset: 0,
-                            zIndex: mode === 'draw' ? 10 : 1,
-                            pointerEvents: mode === 'draw' ? 'auto' : 'none',
-                        }}>
-                            <div className="tldraw-wrapper" style={{ width: '100%', height: '100%' }}>
-                                <Tldraw
-                                    persistenceKey="precept-demo"
-                                    hideUi={mode !== 'draw'}
-                                    onMount={(editor) => tldrawBridge.setEditor(editor)}
-                                />
-                            </div>
-                        </div>
 
                         {/* Research Layer */}
                         {mode === 'research' && selection && (

@@ -277,33 +277,6 @@ header {
 }
 
 /* =============================================================================
-   TLDRAW OVERRIDES
-   ============================================================================= */
-.tldraw-layer {
-  background: transparent !important;
-}
-
-.tl-container {
-  background: transparent !important;
-}
-
-.tl-canvas {
-  background: transparent !important;
-}
-
-.tl-background {
-  display: none !important;
-}
-
-.tl-watermark,
-div[class*="tl-watermark"] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-/* =============================================================================
    AUTH PROMPT
    ============================================================================= */
 .auth-prompt {

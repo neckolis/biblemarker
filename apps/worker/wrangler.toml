@@ -26,10 +26,10 @@ SUPABASE_ANON_KEY = "sb_publishable_ViDArTpEg-NOc2pzPy360g_nuOb1fZT"
 # SUPABASE_SERVICE_ROLE_KEY will be set via .dev.vars for local dev
 ENABLE_AUTH = "false"  # Auth disabled for rapid local development
 
-# Dev KV namespace - uses local preview mode (no ID needed for `wrangler dev`)
-[[kv_namespaces]]
-binding = "BIBLE_CACHE"
-id = "dev-bible-cache-preview"  # Placeholder - wrangler dev uses local simulation
+# Dev KV namespace - handled via local simulation in wrangler dev
+# [[kv_namespaces]]
+# binding = "BIBLE_CACHE"
+# id = "dev-bible-cache-preview" 
 
 # =============================================================================
 # STAGING ENVIRONMENT (`wrangler deploy --env staging`)

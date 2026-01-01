@@ -4,20 +4,15 @@ import {
     BookOpen,
     Heart,
     CheckCircle2,
-    ChevronRight,
     HelpCircle,
     Info,
     List,
     Plus
 } from 'lucide-react';
 
-interface Props {
-    onClose?: () => void;
-}
-
 type Mode = 'observation' | 'interpretation' | 'application';
 
-export function PreceptStudyPanel({ onClose }: Props) {
+export function PreceptStudyPanel() {
     const [mode, setMode] = useState<Mode>('observation');
 
     const renderObservation = () => (
