@@ -25,7 +25,7 @@ export async function getDocument(id: string) {
     return res.json()
 }
 
-export async function saveDocument(doc: Partial<Document>, annotations: Annotation[], shapes: any[]) {
+export async function saveDocument(doc: Partial<Document>, annotations: Annotation[]) {
     const { data: { session } } = await supabase.auth.getSession()
 
     const isNew = !doc.id;
@@ -36,7 +36,6 @@ export async function saveDocument(doc: Partial<Document>, annotations: Annotati
         ...doc,
         user_id: session?.user.id,
         annotations,
-        shapes
     }
 
     const res = await fetch(url, {

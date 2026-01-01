@@ -113,7 +113,7 @@ function AppContent() {
                 translation: selection.t,
                 book_id: selection.b,
                 chapter: selection.c
-            }, annotations, [])
+            }, annotations)
 
             if (saved.id) {
                 setDocId(saved.id)

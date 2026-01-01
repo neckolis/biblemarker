@@ -21,13 +21,12 @@ export interface Document {
     title: string;
     user_id: string;
     annotations?: Annotation[];
-    shapes?: any[];
 }
 
 export interface Preset {
     id: string;
     name: string;
-    kind: 'highlight' | 'underline' | 'shape';
+    kind: 'highlight' | 'underline';
     config: any;
 }
 
